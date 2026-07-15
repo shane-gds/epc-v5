@@ -15,6 +15,31 @@ with identity_inputs as (
         and source_file.ingestion_status = 'LOADED'
 ),
 
+blocking_policy as (
+    select
+        sha256(
+            string_agg(
+                concat_ws(
+                    ':',
+                    policy_version,
+                    rule_code,
+                    rule_logic_version,
+                    cast(rule_priority as varchar),
+                    evidence_class,
+                    cast(enabled as varchar),
+                    source_pair_scope,
+                    coalesce(cast(maximum_side_count as varchar), 'NULL'),
+                    coalesce(cast(maximum_pair_product as varchar), 'NULL'),
+                    oversized_action
+                ),
+                '|' order by rule_priority, rule_code
+            )
+        ) as blocking_policy_fingerprint,
+        count(*) as blocking_rule_count
+    from {{ ref('identity_blocking_policy') }}
+    where policy_version = '{{ var("identity_blocking_policy_version") }}'
+),
+
 population as (
     select
         sha256(
@@ -34,16 +59,22 @@ keyed as (
             'epc-v4.identity.run',
             'v1',
             [
-                'population_fingerprint',
-                "'identity_input_v1'",
-                "'address_v1'",
-                "'identity_eligibility_v1'"
+                'population.population_fingerprint',
+                'blocking_policy.blocking_policy_fingerprint',
+                "'" ~ var('identity_input_algorithm_version') ~ "'",
+                "'" ~ var('identity_address_normaliser_version') ~ "'",
+                "'" ~ var('identity_eligibility_contract_version') ~ "'",
+                "'" ~ var('identity_comparison_model_version') ~ "'",
+                "'" ~ var('identity_decision_policy_version') ~ "'"
             ]
         ) }} as identity_run_key,
-        population_fingerprint,
-        input_source_file_count,
-        input_release_keys
+        population.population_fingerprint,
+        population.input_source_file_count,
+        population.input_release_keys,
+        blocking_policy.blocking_policy_fingerprint,
+        blocking_policy.blocking_rule_count
     from population
+    cross join blocking_policy
 )
 
 select
@@ -60,8 +91,13 @@ select
     population_fingerprint,
     input_source_file_count,
     input_release_keys,
-    'identity_input_v1' as algorithm_version,
-    'address_v1' as normaliser_version,
-    'identity_eligibility_v1' as eligibility_contract_version,
+    blocking_policy_fingerprint,
+    blocking_rule_count,
+    '{{ var("identity_input_algorithm_version") }}' as algorithm_version,
+    '{{ var("identity_address_normaliser_version") }}' as normaliser_version,
+    '{{ var("identity_eligibility_contract_version") }}' as eligibility_contract_version,
+    '{{ var("identity_blocking_policy_version") }}' as blocking_policy_version,
+    '{{ var("identity_comparison_model_version") }}' as comparison_model_version,
+    '{{ var("identity_decision_policy_version") }}' as decision_policy_version,
     current_timestamp as calculated_at
 from keyed

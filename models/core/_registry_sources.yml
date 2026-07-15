@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: registry_foundation
+    description: Persistent externally managed registry tables; dbt never replaces them.
+    schema: core
+    tables:
+      - name: registry_entity
+        columns:
+          - name: registry_entity_id
+            data_tests: [not_null, unique]
+      - name: registry_identifier
+        columns:
+          - name: registry_identifier_id
+            data_tests: [not_null, unique]
+          - name: registry_entity_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('registry_foundation', 'registry_entity')
+                    field: registry_entity_id
+      - name: bridge_registry_observation
+        columns:
+          - name: registry_entity_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('registry_foundation', 'registry_entity')
+                    field: registry_entity_id

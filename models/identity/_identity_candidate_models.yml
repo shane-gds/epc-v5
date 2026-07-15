@@ -1,0 +1,67 @@
+version: 2
+
+seeds:
+  - name: identity_blocking_policy
+    description: Versioned identity candidate blocking rules and fan-out policy.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [policy_version, rule_code]
+    columns:
+      - name: policy_version
+        data_tests: [not_null]
+      - name: rule_code
+        data_tests: [not_null]
+      - name: rule_logic_version
+        data_tests: [not_null]
+      - name: evidence_class
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [DIRECT_IDENTIFIER, PROBABILISTIC, BENCHMARK, PROHIBITED]
+
+models:
+  - name: identity_scoring_input
+    description: Current eligible identity population projected to versioned Splink features.
+    columns:
+      - name: unique_id
+        data_tests: [not_null, unique]
+      - name: identity_run_key
+        data_tests: [not_null]
+      - name: source_dataset
+        data_tests: [not_null]
+
+  - name: identity_candidate_rule_hit
+    description: One admitting blocking-rule hit per immutable identity candidate pair and run.
+    columns:
+      - name: candidate_rule_hit_key
+        data_tests: [not_null, unique]
+      - name: candidate_pair_key
+        data_tests: [not_null]
+      - name: rule_code
+        data_tests: [not_null]
+      - name: rule_logic_version
+        data_tests: [not_null]
+
+  - name: identity_candidate_pair
+    description: One canonical unordered candidate pair per immutable identity run.
+    columns:
+      - name: candidate_pair_key
+        data_tests: [not_null, unique]
+      - name: run_observation_key_l
+        data_tests: [not_null]
+      - name: run_observation_key_r
+        data_tests: [not_null]
+      - name: candidate_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [GENERATED]
+
+  - name: identity_candidate_generation_audit
+    description: Rule-level counts and operational checksums for the current identity run.
+    columns:
+      - name: rule_code
+        data_tests: [not_null, unique]
+      - name: rule_hit_count
+        data_tests: [not_null]

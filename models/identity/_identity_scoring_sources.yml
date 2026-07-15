@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: identity_scoring
+    description: Externally orchestrated, immutable Splink run and score evidence.
+    schema: identity
+    tables:
+      - name: identity_splink_run
+        columns:
+          - name: splink_run_id
+            data_tests: [not_null, unique]
+          - name: identity_run_key
+            data_tests: [not_null]
+          - name: run_status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [RUNNING, SUCCEEDED, FAILED]
+
+      - name: identity_match_score
+        description: One persisted component-level Splink score per candidate/run/model.
+        columns:
+          - name: match_score_key
+            data_tests: [not_null, unique]
+          - name: candidate_pair_key
+            data_tests: [not_null, unique]
+          - name: model_status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [UNCALIBRATED, CALIBRATED, RETIRED]

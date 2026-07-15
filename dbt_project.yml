@@ -17,6 +17,12 @@ clean-targets: ["target", "dbt_packages", "logs"]
 
 vars:
   onsud_release_label: DEC_2025
+  identity_address_normaliser_version: identity_address_v2
+  identity_eligibility_contract_version: identity_eligibility_v2
+  identity_input_algorithm_version: identity_input_v2
+  identity_blocking_policy_version: identity_blocking_benchmark_v1
+  identity_comparison_model_version: splink_benchmark_v1
+  identity_decision_policy_version: identity_decision_uncalibrated_v1
 
 models:
   epc_v4:

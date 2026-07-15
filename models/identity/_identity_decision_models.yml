@@ -1,0 +1,61 @@
+version: 2
+
+models:
+  - name: identity_observation_candidate_summary_l
+    description: Current candidate endpoint summary for canonical left endpoints.
+    columns:
+      - name: identity_run_observation_key
+        data_tests: [not_null, unique]
+
+  - name: identity_observation_candidate_summary_r
+    description: Current candidate endpoint summary for canonical right endpoints.
+    columns:
+      - name: identity_run_observation_key
+        data_tests: [not_null, unique]
+
+  - name: identity_match_decision
+    description: One explicit uncalibrated review decision per current candidate score.
+    columns:
+      - name: match_decision_key
+        data_tests: [not_null, unique]
+      - name: candidate_pair_key
+        data_tests: [not_null, unique]
+      - name: decision_outcome
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [REVIEW, ACCEPT, REJECT]
+      - name: is_accepted_edge
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [false]
+
+  - name: identity_observation_candidate_summary
+    description: One candidate-count and deterministic top-score summary per candidate endpoint.
+    columns:
+      - name: identity_run_observation_key
+        data_tests: [not_null, unique]
+      - name: candidate_count
+        data_tests: [not_null]
+
+  - name: identity_hypothesis
+    description: One explicit singleton or unresolved-review hypothesis per eligible observation.
+    columns:
+      - name: identity_hypothesis_key
+        data_tests: [not_null, unique]
+      - name: identity_run_observation_key
+        data_tests: [not_null, unique]
+      - name: hypothesis_outcome
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [SINGLETON_NO_CANDIDATE, UNRESOLVED_REVIEW]
+
+  - name: identity_cluster_membership
+    description: Current run singleton membership; no review-only edge creates a component.
+    columns:
+      - name: identity_run_observation_key
+        data_tests: [not_null, unique]
+      - name: identity_cluster_key
+        data_tests: [not_null, unique]
