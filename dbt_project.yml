@@ -29,6 +29,8 @@ vars:
   coordinate_transform_contract_version: bng_wgs84_v1
   coordinate_duckdb_version: v1.5.4
   coordinate_spatial_extension_version: 28db190
+  lad_reference_release_label: APR_2025
+  lpa_reference_release_label: MAY_2025
 
 models:
   epc_v4:

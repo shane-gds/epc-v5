@@ -33,6 +33,22 @@ with raw_counts as (
         count(*)
     from {{ source('bronze_ingestion', 'raw_onsud_uprn') }}
     group by source_file_id, dataset_release_id
+    union all
+    select
+        'LAD_REFERENCE',
+        source_file_id,
+        dataset_release_id,
+        count(*)
+    from {{ source('bronze_ingestion', 'raw_lad_name_code') }}
+    group by source_file_id, dataset_release_id
+    union all
+    select
+        'LPA_REFERENCE',
+        source_file_id,
+        dataset_release_id,
+        count(*)
+    from {{ source('bronze_ingestion', 'raw_lpa_name_code') }}
+    group by source_file_id, dataset_release_id
 ),
 
 accepted_counts as (
@@ -63,6 +79,20 @@ accepted_counts as (
         count(*)
     from {{ ref('bridge_onsud_allocation_source_record') }}
     group by source_file_id
+    union all
+    select
+        'LAD_REFERENCE',
+        source_file_id,
+        count(*)
+    from {{ ref('stg_lad_name_code_reference') }}
+    group by source_file_id
+    union all
+    select
+        'LPA_REFERENCE',
+        source_file_id,
+        count(*)
+    from {{ ref('stg_lpa_name_code_reference') }}
+    group by source_file_id
 ),
 
 quarantine_counts as (
@@ -85,6 +115,8 @@ loaded_manifest as (
             when parser_contract_version like 'domestic_epc_recommendation_%'
                 then 'EPC_RECOMMENDATION'
             when parser_contract_version like 'onsud_%' then 'ONSUD'
+            when parser_contract_version like 'ons_lad_%' then 'LAD_REFERENCE'
+            when parser_contract_version like 'ons_lpa_%' then 'LPA_REFERENCE'
         end as source_dataset
     from {{ source('audit_ingestion', 'audit_source_file') }}
     where

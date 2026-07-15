@@ -107,3 +107,44 @@ models:
           - accepted_values:
               arguments:
                 values: [VALID, MISSING, PARTIAL, OUT_OF_BOUNDS]
+
+  - name: stg_lad_name_code_reference
+    description: One typed LAD names-and-codes source observation with release and row lineage.
+    columns:
+      - name: geography_reference_observation_key
+        data_tests: [not_null, unique]
+      - name: source_record_key
+        data_tests: [not_null, unique]
+      - name: geography_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, MISSING_CODE, INVALID_CODE, MISSING_NAME]
+      - name: object_id_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, MISSING, INVALID]
+
+  - name: stg_lpa_name_code_reference
+    description: One typed LPA names-and-codes source observation with release and row lineage.
+    columns:
+      - name: geography_reference_observation_key
+        data_tests: [not_null, unique]
+      - name: source_record_key
+        data_tests: [not_null, unique]
+      - name: geography_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, MISSING_CODE, INVALID_CODE, MISSING_NAME]
+      - name: co_terminous_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, MISSING, INVALID]
+      - name: object_id_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, MISSING, INVALID]

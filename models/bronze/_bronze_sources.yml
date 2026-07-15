@@ -104,3 +104,53 @@ sources:
             data_tests: [not_null]
           - name: uprn_raw
             data_tests: [not_null]
+
+      - name: raw_lad_name_code
+        description: One supplied ONS LAD names-and-codes reference row.
+        loaded_at_field: loaded_at
+        columns:
+          - name: source_record_key
+            data_tests: [not_null, unique]
+          - name: source_file_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_source_file')
+                    field: source_file_id
+          - name: dataset_release_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_dataset_release')
+                    field: dataset_release_id
+          - name: source_row_number
+            data_tests: [not_null]
+          - name: lad25cd_raw
+            data_tests: [not_null]
+
+      - name: raw_lpa_name_code
+        description: One supplied ONS LPA names-and-codes reference row.
+        loaded_at_field: loaded_at
+        columns:
+          - name: source_record_key
+            data_tests: [not_null, unique]
+          - name: source_file_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_source_file')
+                    field: source_file_id
+          - name: dataset_release_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_dataset_release')
+                    field: dataset_release_id
+          - name: source_row_number
+            data_tests: [not_null]
+          - name: lpa25cd_raw
+            data_tests: [not_null]

@@ -69,6 +69,32 @@ with metrics as (
     where allocation_status = 'CONFLICT'
     union all
     select
+        'LAD_REFERENCE',
+        'SILVER_ROW_COUNT',
+        count(*)
+    from {{ ref('stg_lad_name_code_reference') }}
+    union all
+    select
+        'LAD_REFERENCE',
+        'INVALID_REFERENCE_COUNT',
+        count(*)
+    from {{ ref('stg_lad_name_code_reference') }}
+    where geography_parse_status <> 'VALID'
+    union all
+    select
+        'LPA_REFERENCE',
+        'SILVER_ROW_COUNT',
+        count(*)
+    from {{ ref('stg_lpa_name_code_reference') }}
+    union all
+    select
+        'LPA_REFERENCE',
+        'INVALID_REFERENCE_COUNT',
+        count(*)
+    from {{ ref('stg_lpa_name_code_reference') }}
+    where geography_parse_status <> 'VALID'
+    union all
+    select
         source_dataset,
         concat('QUARANTINE_', rule_code),
         count(*)

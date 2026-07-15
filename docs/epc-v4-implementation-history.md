@@ -33,13 +33,14 @@ Statuses used below:
 
 | Area | Current state | Evidence |
 |---|---|---|
-| Source control | Private GitHub repository on `main` | Latest pushed commit `edd90f7` |
-| Audit and Bronze | Complete for current PPD, domestic EPC and ONSUD inputs | 42 leaf files reconciled |
-| Silver | Four canonical observation/allocation models complete | 183,755,287 accepted rows |
+| Source control | Private GitHub repository on `main` | Latest pushed commit `595ef55` |
+| Audit and Bronze | Complete for current source and geography-reference inputs | 44 leaf files reconciled |
+| Silver | Source observations, allocations and geography references complete | 183,756,030 accepted rows |
 | Quarantine | Append-only fatal-rule evidence | 11 EPC source rows |
 | Identity input | Run-versioned PP/EPC observation population | 54,920,040 observations |
 | Location input | Explicit ONSUD `DEC_2025` required-UPRN outcomes | 17,929,367 UPRNs |
 | Coordinate cache | Distinct BNG pairs transformed once to WGS84 | 16,264,097 pairs |
+| Geography reference | Release-aware LAD and LPA endpoints complete | 743 geography rows |
 | Identity candidates | Complete for current benchmark policy | 26,301,482 pairs |
 | Identity scoring | Complete, explicitly uncalibrated | 26,301,482 Splink scores |
 | Identity outcomes | Review decisions and singleton/unresolved closure complete | 54,869,297 hypotheses |
@@ -436,6 +437,29 @@ retain the inward sector digit. Both models expose contributing counts and a con
 bounding-box-diagonal spread diagnostic. Neither approximate model carries LSOA, MSOA,
 LAD, region, country or other official geography fields.
 
+### IMP-032: Load official geography references as separate audited releases
+
+**Status:** Accepted
+
+The April 2025 LAD and May 2025 LPA names-and-codes files are independent publisher
+releases with separate audit manifests, stable release keys and release-sensitive source
+row keys. `dim_geography` is keyed by geography type, official code and stable reference
+release. Welsh LAD names and LPA co-terminous flags remain source evidence. Parent,
+country and validity fields remain null with explicit `NOT_SUPPLIED` statuses because the
+retained files do not provide those facts; LSOA/MSOA names are not manufactured from
+ONSUD code strings.
+
+### IMP-033: Separate source-file content identity from container membership
+
+**Status:** Accepted
+
+One source-file manifest represents one content checksum within a dataset release,
+independent of filename, path or archive parent. Archive containment is a separate
+many-to-many audit bridge so repacked archives can reuse loaded member content without
+duplicating Bronze rows. Parser and member-set drift fail explicitly. Direct and archive
+header/schema failures leave terminal file evidence, while corrected bytes under the same
+supplied name register as new logical content.
+
 ## 6. Validation evidence
 
 The latest completed pre-Phase-2 validation on 15 July 2026 produced:
@@ -470,6 +494,11 @@ The completed Phase 2 identity checkpoint later on 15 July 2026 produced:
 - 49 of 49 targeted location and coordinate-cache tests passing.
 - WGS84 incremental no-op idempotency confirmed by unchanged row count, timestamp and
   order-independent coordinate-key checksum.
+- 63 of 63 targeted geography-reference, source-container and reconciliation tests
+  passing.
+- 20 of 20 Python tests passing after audited reference and container fixtures.
+- 44 of 44 loaded leaf files reconcile: 183,756,041 Bronze rows equal 183,756,030
+  accepted rows plus 11 quarantined rows.
 
 ## 7. Active Phase 2 plan
 
@@ -833,9 +862,43 @@ The following sequence is active. This section will be updated as work progresse
   unchanged.
 - Database size is approximately 144 GB with approximately 142 GB free.
 
+### 2026-07-15 20:58 UTC: Audited LAD/LPA geography references
+
+- Registered and loaded two independent direct-CSV releases:
+
+| Dataset | Release | Rows | Release key | File SHA-256 |
+|---|---|---:|---|---|
+| LAD names/codes | `APR_2025` | 361 | `87c98acf760ead613c0d07ba92d9ac5d5fba3217d46e00a3227f1f7d425b54dd` | `72b9dc5047c3aaed30a4cb3817130520e56ecd89032b9050bad16cc9d0d48e71` |
+| LPA names/codes | `MAY_2025` | 382 | `576d3dd09cd5b739c2f6de0a36abc72230cdf45bf0d363b635fce706df4bb117` | `1050b0b52d736b59268acdabbc47c5f09592b666cc5409c217d09408b9884573` |
+
+- Initial import run `bb496a95-c014-4ee0-9f97-1e567066d3f6` loaded both files;
+  immediate rerun `d2c3d1bb-6b64-424d-a7f9-e87fd3086b25` skipped both without
+  changing Bronze rows.
+- Exact headed schemas are enforced before parsing. Source-row key payload v2 includes
+  the stable release key, content checksum and row number while remaining independent of
+  supplied path.
+- All 361 LAD and 382 LPA source observations are `VALID`; all profile outcomes are
+  `UNIQUE` and all 743 rows publish to `core.dim_geography`.
+- Geography-code coverage includes England, Northern Ireland, Scotland and Wales. The
+  LAD dimension preserves 22 supplied Welsh names. LPA evidence preserves 309 true and
+  73 false co-terminous flags.
+- No hierarchy, country or validity fact was supplied: all corresponding dimension
+  values are null with explicit `NOT_SUPPLIED` statuses.
+- Added path-independent content inventory and 41 archive-member memberships across the
+  domestic EPC and ONSUD archive manifests. Repacked-content, renamed-file,
+  corrected-content, failed-header and parser-drift fixtures pass.
+- Published Silver reconciliation for all 44 loaded leaf files:
+  - 183,756,041 Bronze rows.
+  - 183,756,030 accepted Silver rows.
+  - 11 quarantined EPC rows.
+- Targeted geography/reference/container dbt tests: 63 of 63 passing.
+- Python tests: 20 of 20 passing; dbt parse, Ruff, SQLFluff and diff checks pass.
+- Database size remains approximately 144 GB with approximately 142 GB free.
+
 ## 9. Open decisions and governance dependencies
 
-- Official retrieval dates and licensing terms for copied legacy PPD/EPC files.
+- Official retrieval dates and licensing terms for copied legacy PPD/EPC/ONSUD and
+  geography-reference files.
 - Production Splink comparison settings, m/u estimates and threshold bands.
 - Whether and how transitive links may promote a multi-observation cluster.
 - Manual-review workflow and persistence contract.

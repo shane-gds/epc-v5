@@ -33,6 +33,26 @@ sources:
                   arguments:
                     values: [REGISTERED, LOADING, PARTIAL, LOADED, FAILED]
 
+      - name: audit_source_file_container
+        description: Path-independent archive-to-member content membership evidence.
+        columns:
+          - name: source_file_container_key
+            data_tests: [not_null, unique]
+          - name: parent_source_file_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_source_file')
+                    field: source_file_id
+          - name: child_source_file_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_source_file')
+                    field: source_file_id
+
       - name: audit_pipeline_run
         description: One invocation of the bounded source importer.
         columns:

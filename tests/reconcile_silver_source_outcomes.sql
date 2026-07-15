@@ -19,6 +19,16 @@ with raw_counts as (
         'ONSUD',
         count(*)
     from {{ source('bronze_ingestion', 'raw_onsud_uprn') }}
+    union all
+    select
+        'LAD_REFERENCE',
+        count(*)
+    from {{ source('bronze_ingestion', 'raw_lad_name_code') }}
+    union all
+    select
+        'LPA_REFERENCE',
+        count(*)
+    from {{ source('bronze_ingestion', 'raw_lpa_name_code') }}
 ),
 
 accepted_counts as (
@@ -41,6 +51,16 @@ accepted_counts as (
         'ONSUD',
         coalesce(sum(source_record_count), 0)
     from {{ ref('stg_onsud_uprn_allocation') }}
+    union all
+    select
+        'LAD_REFERENCE',
+        count(*)
+    from {{ ref('stg_lad_name_code_reference') }}
+    union all
+    select
+        'LPA_REFERENCE',
+        count(*)
+    from {{ ref('stg_lpa_name_code_reference') }}
 ),
 
 quarantine_counts as (

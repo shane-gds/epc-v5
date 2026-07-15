@@ -43,6 +43,9 @@ PP_COLUMNS = (
     "record_status_raw",
 )
 
+LAD_REFERENCE_COLUMNS = ("LAD25CD", "LAD25NM", "LAD25NMW", "ObjectId")
+LPA_REFERENCE_COLUMNS = ("LPA25CD", "LPA25NM", "Co_terminous", "ObjectId")
+
 
 @dataclass(frozen=True)
 class Route:
@@ -52,6 +55,9 @@ class Route:
     source_key_namespace: str
     has_header: bool = True
     fixed_columns: tuple[str, ...] | None = None
+    source_key_payload_version: str = "v1"
+    source_key_includes_release: bool = False
+    source_key_includes_member_path: bool = True
 
 
 @dataclass(frozen=True)
@@ -96,6 +102,30 @@ ROUTES: dict[str, tuple[Route, ...]] = {
             raw_table="raw_onsud_uprn",
             parser_contract_version="onsud_dec_2025_csv_v1",
             source_key_namespace="uk.gov.ons.onsud.source-row",
+        ),
+    ),
+    "lad_reference": (
+        Route(
+            member_pattern=None,
+            raw_table="raw_lad_name_code",
+            parser_contract_version="ons_lad_apr_2025_name_code_csv_v1",
+            source_key_namespace="uk.gov.ons.lad-name-code.source-row",
+            fixed_columns=LAD_REFERENCE_COLUMNS,
+            source_key_payload_version="v2",
+            source_key_includes_release=True,
+            source_key_includes_member_path=False,
+        ),
+    ),
+    "lpa_reference": (
+        Route(
+            member_pattern=None,
+            raw_table="raw_lpa_name_code",
+            parser_contract_version="ons_lpa_may_2025_name_code_csv_v1",
+            source_key_namespace="uk.gov.ons.lpa-name-code.source-row",
+            fixed_columns=LPA_REFERENCE_COLUMNS,
+            source_key_payload_version="v2",
+            source_key_includes_release=True,
+            source_key_includes_member_path=False,
         ),
     ),
 }
@@ -266,6 +296,48 @@ def _create_control_tables(connection: duckdb.DuckDBPyConnection) -> None:
         )
         """
     )
+    connection.execute(
+        """
+        create table if not exists audit.audit_source_file_container (
+            source_file_container_key varchar primary key,
+            parent_source_file_id uuid not null,
+            child_source_file_id uuid not null,
+            source_member_path varchar not null,
+            registered_pipeline_run_id uuid not null,
+            registered_at timestamptz not null
+        )
+        """
+    )
+    membership_key = stable_sha256_sql(
+        "epc-v4.audit.source-file-container",
+        "v1",
+        [
+            "cast(parent_source_file_id as varchar)",
+            "cast(source_file_id as varchar)",
+            "file_name",
+        ],
+    )
+    connection.execute(
+        f"""
+        insert into audit.audit_source_file_container by name
+        select
+            {membership_key} as source_file_container_key,
+            parent_source_file_id,
+            source_file_id as child_source_file_id,
+            file_name as source_member_path,
+            registered_pipeline_run_id,
+            registered_at
+        from audit.audit_source_file as child
+        where parent_source_file_id is not null
+          and not exists (
+              select 1
+              from audit.audit_source_file_container as membership
+              where membership.parent_source_file_id = child.parent_source_file_id
+                and membership.child_source_file_id = child.source_file_id
+                and membership.source_member_path = child.file_name
+          )
+        """
+    )
 
 
 def _register_pipeline_run(
@@ -303,13 +375,35 @@ def _register_release(
     )
     existing = connection.execute(
         """
-        select dataset_release_id
+        select dataset_release_id, dataset_code, publisher, release_label,
+               release_label_status, release_date, retrieval_status, source_url,
+               licence_url, licence_status
         from audit.audit_dataset_release
         where release_key = ?
         """,
         [release_key],
     ).fetchone()
     if existing:
+        existing_metadata = list(existing[1:])
+        if existing_metadata[4] is not None:
+            existing_metadata[4] = existing_metadata[4].isoformat()
+        supplied_date = source.get("release_date")
+        supplied_metadata = [
+            source["dataset_code"],
+            source["publisher"],
+            source["release_label"],
+            source["release_label_status"],
+            str(supplied_date) if supplied_date is not None else None,
+            source["retrieval_status"],
+            source.get("source_url"),
+            source.get("licence_url"),
+            source["licence_status"],
+        ]
+        if existing_metadata != supplied_metadata:
+            raise RuntimeError(
+                f"Conflicting metadata registered for release {release_key}: "
+                f"existing={existing_metadata}, supplied={supplied_metadata}"
+            )
         return existing[0]
 
     dataset_release_id = uuid.uuid4()
@@ -358,6 +452,43 @@ def _find_source_file(
     ).fetchone()
 
 
+def _register_container_membership(
+    connection: duckdb.DuckDBPyConnection,
+    *,
+    parent_source_file_id: uuid.UUID | None,
+    child_source_file_id: uuid.UUID,
+    source_member_path: str,
+    pipeline_run_id: uuid.UUID,
+) -> None:
+    if parent_source_file_id is None:
+        return
+    membership_key = stable_sha256(
+        "epc-v4.audit.source-file-container",
+        "v1",
+        [str(parent_source_file_id), str(child_source_file_id), source_member_path],
+    )
+    connection.execute(
+        """
+        insert into audit.audit_source_file_container
+        select ?, ?, ?, ?, ?, ?
+        where not exists (
+            select 1
+            from audit.audit_source_file_container
+            where source_file_container_key = ?
+        )
+        """,
+        [
+            membership_key,
+            parent_source_file_id,
+            child_source_file_id,
+            source_member_path,
+            pipeline_run_id,
+            _now(),
+            membership_key,
+        ],
+    )
+
+
 def _register_source_file(
     connection: duckdb.DuckDBPyConnection,
     *,
@@ -373,14 +504,32 @@ def _register_source_file(
     zip_crc32: str | None = None,
     zip_compressed_size: int | None = None,
 ) -> uuid.UUID:
-    existing = _find_source_file(connection, dataset_release_id, file_name, parent_source_file_id)
-    if existing and existing[1] == content_sha256 and existing[2] == byte_size:
-        return existing[0]
-    if existing:
-        raise RuntimeError(
-            f"Conflicting content registered for {file_name}: "
-            f"existing={existing[1]}, supplied={content_sha256}"
+    content_match = connection.execute(
+        """
+        select source_file_id, parser_contract_version
+        from audit.audit_source_file
+        where dataset_release_id = ?
+          and content_sha256 = ?
+          and byte_size = ?
+        order by registered_at
+        limit 1
+        """,
+        [dataset_release_id, content_sha256, byte_size],
+    ).fetchone()
+    if content_match:
+        if content_match[1] != parser_contract_version:
+            raise RuntimeError(
+                f"Conflicting parser contract for content {content_sha256}: "
+                f"existing={content_match[1]}, supplied={parser_contract_version}"
+            )
+        _register_container_membership(
+            connection,
+            parent_source_file_id=parent_source_file_id,
+            child_source_file_id=content_match[0],
+            source_member_path=file_name,
+            pipeline_run_id=pipeline_run_id,
         )
+        return content_match[0]
 
     source_file_id = uuid.uuid4()
     connection.execute(
@@ -406,6 +555,13 @@ def _register_source_file(
             _now(),
         ],
     )
+    _register_container_membership(
+        connection,
+        parent_source_file_id=parent_source_file_id,
+        child_source_file_id=source_file_id,
+        source_member_path=file_name,
+        pipeline_run_id=pipeline_run_id,
+    )
     return source_file_id
 
 
@@ -417,6 +573,22 @@ def _source_file_status(connection: duckdb.DuckDBPyConnection, source_file_id: u
     if not row:
         raise RuntimeError(f"Missing source-file manifest {source_file_id}")
     return str(row[0])
+
+
+def _mark_source_file_failed(
+    connection: duckdb.DuckDBPyConnection,
+    source_file_id: uuid.UUID,
+    error: Exception | str,
+) -> None:
+    message = str(error) or type(error).__name__
+    connection.execute(
+        """
+        update audit.audit_source_file
+        set ingestion_status = 'FAILED', failure_message = ?
+        where source_file_id = ? and ingestion_status <> 'LOADED'
+        """,
+        [message[:4000], source_file_id],
+    )
 
 
 def _ensure_raw_table(
@@ -489,20 +661,25 @@ def _load_csv(
     pipeline_run_id: uuid.UUID,
 ) -> int:
     raw_columns = _raw_column_names(source_columns, route.has_header)
-    _ensure_raw_table(connection, route.raw_table, raw_columns)
     qualified = _qualified_table("bronze", route.raw_table)
     source_projection = ",\n".join(
         f"source.{_quote_identifier(source)} as {_quote_identifier(raw)}"
         for source, raw in zip(source_columns, raw_columns, strict=True)
     )
+    source_key_fields = [sql_literal(content_sha256)]
+    if route.source_key_includes_release:
+        release_key = connection.execute(
+            "select release_key from audit.audit_dataset_release where dataset_release_id = ?",
+            [dataset_release_id],
+        ).fetchone()[0]
+        source_key_fields.insert(0, sql_literal(str(release_key)))
+    if route.source_key_includes_member_path:
+        source_key_fields.append(sql_literal(source_member_path))
+    source_key_fields.append("cast(source_row_number as varchar)")
     source_key = stable_sha256_sql(
         route.source_key_namespace,
-        "v1",
-        [
-            sql_literal(content_sha256),
-            sql_literal(source_member_path),
-            "cast(source_row_number as varchar)",
-        ],
+        route.source_key_payload_version,
+        source_key_fields,
     )
     parent_id_sql = (
         f"uuid {sql_literal(str(parent_source_file_id))}"
@@ -536,6 +713,7 @@ def _load_csv(
 
     connection.execute("begin transaction")
     try:
+        _ensure_raw_table(connection, route.raw_table, raw_columns)
         connection.execute(
             """
             update audit.audit_source_file
@@ -558,14 +736,7 @@ def _load_csv(
         return inserted
     except Exception as error:
         connection.execute("rollback")
-        connection.execute(
-            """
-            update audit.audit_source_file
-            set ingestion_status = 'FAILED', failure_message = ?
-            where source_file_id = ?
-            """,
-            [str(error)[:4000], source_file_id],
-        )
+        _mark_source_file_failed(connection, source_file_id, error)
         raise
 
 
@@ -580,6 +751,9 @@ def _import_direct_file(
     path = settings.data_root / source["file"]
     if not path.is_file():
         raise FileNotFoundError(path)
+    columns = route.fixed_columns
+    if columns is None:
+        raise RuntimeError(f"Direct route {target_name} has no fixed columns")
     _ensure_free_space(settings.database_path.parent, 0, settings.min_free_gib)
     LOGGER.info("Hashing %s", path)
     content_sha256 = _sha256_file(path)
@@ -600,9 +774,27 @@ def _import_direct_file(
         LOGGER.info("Skipping already-loaded source %s", path.name)
         return {"loaded": 0, "skipped": 1}
 
-    columns = route.fixed_columns
-    if columns is None:
-        raise RuntimeError(f"Direct route {target_name} has no fixed columns")
+    if route.has_header:
+        try:
+            observed_columns = _read_header(path)
+            if observed_columns != columns:
+                raise RuntimeError(
+                    f"Source header drift for {path.name}: "
+                    f"expected {columns}, found {observed_columns}"
+                )
+        except Exception as error:
+            message = str(error) or type(error).__name__
+            _mark_source_file_failed(connection, source_file_id, error)
+            connection.execute(
+                """
+                update audit.audit_dataset_release
+                set status = 'FAILED', loaded_at = null
+                where dataset_release_id = ?
+                """,
+                [dataset_release_id],
+            )
+            raise RuntimeError(message) from error
+
     LOGGER.info("Loading %s into bronze.%s", path.name, route.raw_table)
     rows = _load_csv(
         connection,
@@ -655,12 +847,14 @@ def _finalize_archive_manifest(
 ) -> None:
     totals = connection.execute(
         """
-        select count(*), coalesce(sum(observed_row_count), 0),
-               coalesce(sum(accepted_row_count), 0),
-               coalesce(sum(quarantined_row_count), 0),
-               count(*) filter (where ingestion_status = 'LOADED')
-        from audit.audit_source_file
-        where parent_source_file_id = ?
+        select count(*), coalesce(sum(child.observed_row_count), 0),
+               coalesce(sum(child.accepted_row_count), 0),
+               coalesce(sum(child.quarantined_row_count), 0),
+               count(*) filter (where child.ingestion_status = 'LOADED')
+        from audit.audit_source_file_container as membership
+        inner join audit.audit_source_file as child
+            on membership.child_source_file_id = child.source_file_id
+        where membership.parent_source_file_id = ?
         """,
         [archive_source_file_id],
     ).fetchone()
@@ -719,6 +913,31 @@ def _import_archive(
         parser_contract_version="zip_archive_v1",
     )
     if _source_file_status(connection, archive_source_file_id) == "LOADED":
+        with zipfile.ZipFile(path) as archive:
+            expected_contracts = {
+                member.filename: route.parser_contract_version
+                for member in archive.infolist()
+                if not member.is_dir()
+                and (route := _route_for_member(target_name, member.filename)) is not None
+            }
+        registered_contracts = dict(
+            connection.execute(
+                """
+                select membership.source_member_path, child.parser_contract_version
+                from audit.audit_source_file_container as membership
+                inner join audit.audit_source_file as child
+                    on membership.child_source_file_id = child.source_file_id
+                where membership.parent_source_file_id = ?
+                  and child.ingestion_status = 'LOADED'
+                """,
+                [archive_source_file_id],
+            ).fetchall()
+        )
+        if registered_contracts != expected_contracts:
+            raise RuntimeError(
+                "Archive member set or parser contract drift requires migration: "
+                f"registered={registered_contracts}, expected={expected_contracts}"
+            )
         LOGGER.info("Skipping already-loaded archive %s", path.name)
         return {"loaded": 0, "skipped": 1}
 
@@ -747,6 +966,7 @@ def _import_archive(
                 existing
                 and existing[2] == member.file_size
                 and existing[3] == crc32
+                and existing[4] == route.parser_contract_version
                 and existing[5] == "LOADED"
             ):
                 LOGGER.info("Skipping loaded archive member %s", member.filename)
@@ -758,9 +978,9 @@ def _import_archive(
             )
             temporary_path = run_temp / Path(member.filename).name
             LOGGER.info("Extracting %s (%.2f GiB)", member.filename, member.file_size / GIB)
+            source_file_id: uuid.UUID | None = None
             try:
                 member_sha256 = _extract_member(archive, member, temporary_path)
-                source_columns = _read_header(temporary_path)
                 source_file_id = _register_source_file(
                     connection,
                     dataset_release_id=dataset_release_id,
@@ -775,6 +995,11 @@ def _import_archive(
                     zip_crc32=crc32,
                     zip_compressed_size=member.compress_size,
                 )
+                if _source_file_status(connection, source_file_id) == "LOADED":
+                    LOGGER.info("Reusing loaded archive-member content %s", member.filename)
+                    skipped += 1
+                    continue
+                source_columns = _read_header(temporary_path)
                 LOGGER.info("Loading %s into bronze.%s", member.filename, route.raw_table)
                 member_rows = _load_csv(
                     connection,
@@ -792,6 +1017,27 @@ def _import_archive(
                 rows += member_rows
                 LOGGER.info("Loaded %s rows from %s", f"{member_rows:,}", member.filename)
                 connection.execute("checkpoint")
+            except Exception as error:
+                if source_file_id is not None:
+                    _mark_source_file_failed(connection, source_file_id, error)
+                message = (str(error) or type(error).__name__)[:4000]
+                connection.execute(
+                    """
+                    update audit.audit_source_file
+                    set ingestion_status = 'PARTIAL', failure_message = ?
+                    where source_file_id = ?
+                    """,
+                    [message, archive_source_file_id],
+                )
+                connection.execute(
+                    """
+                    update audit.audit_dataset_release
+                    set status = 'PARTIAL', loaded_at = null
+                    where dataset_release_id = ?
+                    """,
+                    [dataset_release_id],
+                )
+                raise
             finally:
                 temporary_path.unlink(missing_ok=True)
     run_temp.rmdir()
@@ -819,7 +1065,7 @@ def run_import(
         for target_name in targets:
             LOGGER.info("Starting target %s", target_name)
             source = settings.sources[target_name]
-            if target_name == "pp":
+            if all(route.member_pattern is None for route in ROUTES[target_name]):
                 summary[target_name] = _import_direct_file(
                     connection, settings, target_name, source, pipeline_run_id
                 )
@@ -931,23 +1177,51 @@ def publish_silver_reconciliation(database_path: Path) -> int:
                 where manifest.source_file_id = reconciliation.source_file_id
                 """
             )
-            connection.execute(
+            has_container_bridge = connection.execute(
                 """
-                update audit.audit_source_file as archive
-                set accepted_row_count = child.accepted_row_count,
-                    quarantined_row_count = child.quarantined_row_count
+                select count(*) > 0
+                from information_schema.tables
+                where table_schema = 'audit'
+                  and table_name = 'audit_source_file_container'
+                """
+            ).fetchone()[0]
+            if has_container_bridge:
+                connection.execute(
+                    """
+                    update audit.audit_source_file as archive
+                    set accepted_row_count = child.accepted_row_count,
+                        quarantined_row_count = child.quarantined_row_count
                 from (
                     select
-                        parent_source_file_id,
-                        sum(accepted_row_count) as accepted_row_count,
-                        sum(quarantined_row_count) as quarantined_row_count
-                    from audit.audit_source_file
-                    where parent_source_file_id is not null
-                    group by parent_source_file_id
-                ) as child
-                where archive.source_file_id = child.parent_source_file_id
-                """
-            )
+                        membership.parent_source_file_id,
+                        sum(child.accepted_row_count) as accepted_row_count,
+                        sum(child.quarantined_row_count) as quarantined_row_count
+                    from audit.audit_source_file_container as membership
+                    inner join audit.audit_source_file as child
+                        on membership.child_source_file_id = child.source_file_id
+                    group by membership.parent_source_file_id
+                    ) as child
+                    where archive.source_file_id = child.parent_source_file_id
+                    """
+                )
+            else:
+                connection.execute(
+                    """
+                    update audit.audit_source_file as archive
+                    set accepted_row_count = child.accepted_row_count,
+                        quarantined_row_count = child.quarantined_row_count
+                    from (
+                        select
+                            parent_source_file_id,
+                            sum(accepted_row_count) as accepted_row_count,
+                            sum(quarantined_row_count) as quarantined_row_count
+                        from audit.audit_source_file
+                        where parent_source_file_id is not null
+                        group by parent_source_file_id
+                    ) as child
+                    where archive.source_file_id = child.parent_source_file_id
+                    """
+                )
             connection.execute("commit")
         except Exception:
             connection.execute("rollback")

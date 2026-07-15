@@ -26,7 +26,10 @@ def main() -> None:
         "--config", type=Path, default=default_config_path(), help="Source import YAML"
     )
     import_parser.add_argument(
-        "--targets", nargs="+", choices=("pp", "epc", "onsud"), default=("pp", "epc", "onsud")
+        "--targets",
+        nargs="+",
+        choices=("pp", "epc", "onsud", "lad_reference", "lpa_reference"),
+        default=("pp", "epc", "onsud", "lad_reference", "lpa_reference"),
     )
     import_parser.add_argument("--database", type=Path)
     import_parser.add_argument("--data-root", type=Path)
