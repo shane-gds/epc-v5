@@ -44,6 +44,7 @@ Statuses used below:
 | Identity outcomes | Review decisions and singleton/unresolved closure complete | 54,869,297 hypotheses |
 | Calibration | Deterministic sample ready; explicit labels pending | 1,104 blank-label rows |
 | Core atomic facts | Sale, EPC and recommendation facts complete | 142,368,834 facts |
+| Recommendation aggregate | Certificate-grain evidence cache complete | 23,573,781 certificates |
 | Core registries | Persistent foundations empty pending calibrated promotion | 0 promoted entities |
 | Current-state and MEES marts | Not started | Planned Phase 5 |
 | Graph export | Not started | Planned Phase 6 |
@@ -396,6 +397,18 @@ building, premises-candidate, subject or registry foreign keys. Subject assignme
 be represented by separate versioned assertion models only after calibrated identity
 decisions exist.
 
+### IMP-029: Preserve recommendation incompleteness in certificate aggregates
+
+**Status:** Accepted
+
+The recommendation aggregate includes every canonical EPC certificate, including
+certificates with no parented recommendation observations. Indicative cost totals use
+only explicitly parsed range or single-value observations and remain null when no parsed
+cost exists. Concept-mapping counts and coverage remain null with mapper status
+`NOT_RUN` until a governed taxonomy mapper is implemented; zero must not represent work
+that has not been performed. Orphan recommendation facts remain authoritative standalone
+observations and reconcile outside certificate-level totals.
+
 ## 6. Validation evidence
 
 The latest completed pre-Phase-2 validation on 15 July 2026 produced:
@@ -425,6 +438,8 @@ The completed Phase 2 identity checkpoint later on 15 July 2026 produced:
   calibration framework materialisation.
 - 11 of 11 Python tests passing.
 - 25 of 25 atomic core fact tests passing.
+- 14 of 14 targeted recommendation aggregate tests passing.
+- 59 of 59 bounded complete core tests passing after recommendation aggregation.
 
 ## 7. Active Phase 2 plan
 
@@ -695,6 +710,43 @@ The following sequence is active. This section will be updated as work progresse
 - No atomic fact exposes subject, dwelling, building or registry identity.
 - Atomic fact dbt tests: 25 of 25 passing.
 - Database size is approximately 134 GB with approximately 153 GB free.
+
+### 2026-07-15 16:21 UTC: Certificate recommendation aggregate
+
+- Materialised a memory-bounded parented-observation summary before joining to the full
+  canonical certificate population.
+- The two aggregate tables completed in 1 minute 22 seconds with one DuckDB thread.
+- Published `core.int_epc_recommendation_agg` grain and reconciliation:
+
+| Measure | Count |
+|---|---:|
+| Certificate aggregate rows | 23,573,781 |
+| Parented recommendation observations | 87,448,787 |
+| Parsed-cost recommendation observations | 72,902,023 |
+| Explicit orphan observations outside aggregate | 7 |
+
+- Aggregate completeness outcomes:
+
+| Status | Certificates | Recommendations | Parsed costs |
+|---|---:|---:|---:|
+| `COMPLETE_COSTS` | 18,206,072 | 72,895,157 | 72,895,157 |
+| `NO_PARSED_COSTS` | 3,163,138 | 14,517,673 | 0 |
+| `NO_RECOMMENDATIONS` | 2,198,521 | 0 | 0 |
+| `PARTIAL_COSTS` | 6,050 | 35,957 | 6,866 |
+
+- Published count columns conform to `UINTEGER`; indicative totals conform to
+  `DECIMAL(20,2)` and are null when no parsed cost exists.
+- Mapping eligibility, mapped counts and mapping coverage remain null under explicit
+  mapper version/status `NOT_RUN`.
+- National indicative item totals are GBP 198,638,843,111 lower-bound and GBP
+  346,834,082,431 upper-bound. These are evidence aggregates, not quotations, actual
+  spend, installed-work costs or exemption evidence.
+- Recommendation aggregates contain no dwelling, building, registry, coordinate or
+  geography fields.
+- Targeted aggregate tests: 14 of 14 passing.
+- Complete bounded core tests: 59 of 59 passing.
+- Python tests: 11 of 11 passing; dbt parse, Ruff, SQLFluff and diff checks pass.
+- Database size is approximately 138 GB with approximately 149 GB free.
 
 ## 9. Open decisions and governance dependencies
 
