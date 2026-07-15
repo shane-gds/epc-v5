@@ -5,10 +5,11 @@ epc_v4:
       type: duckdb
       path: "{{ env_var('EPC_V4_DUCKDB_PATH', 'output/duckdb/epc_v4.duckdb') }}"
       schema: main
-      threads: 4
+      threads: "{{ env_var('EPC_V4_DBT_THREADS', '4') | int }}"
       extensions:
         - spatial
       settings:
+        threads: "{{ env_var('EPC_V4_DUCKDB_THREADS', '4') | int }}"
         preserve_insertion_order: false
-        memory_limit: "12GB"
-        max_temp_directory_size: "70GB"
+        memory_limit: "{{ env_var('EPC_V4_MEMORY_LIMIT', '12GB') }}"
+        max_temp_directory_size: "{{ env_var('EPC_V4_MAX_TEMP_SIZE', '70GB') }}"

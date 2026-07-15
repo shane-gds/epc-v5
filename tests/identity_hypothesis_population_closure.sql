@@ -1,5 +1,7 @@
 with eligible as (
-    select identity_run_observation_key
+    select
+        count(*) as observation_count,
+        bit_xor(hash(observation.identity_run_observation_key)) as endpoint_checksum
     from {{ ref('int_identity_observation') }} as observation
     inner join {{ ref('int_identity_current_run') }} as current_run
         on observation.identity_run_key = current_run.identity_run_key
@@ -7,28 +9,21 @@ with eligible as (
 ),
 
 hypotheses as (
-    select identity_run_observation_key
+    select
+        count(*) as observation_count,
+        bit_xor(hash(hypothesis.identity_run_observation_key)) as endpoint_checksum
     from {{ ref('identity_hypothesis') }} as hypothesis
     inner join {{ ref('int_identity_current_run') }} as current_run
         on hypothesis.identity_run_key = current_run.identity_run_key
 )
 
 select
-    'ELIGIBLE_WITHOUT_HYPOTHESIS' as issue_type,
-    eligible.identity_run_observation_key
+    eligible.observation_count as expected_observation_count,
+    hypotheses.observation_count as actual_hypothesis_count,
+    eligible.endpoint_checksum as expected_endpoint_checksum,
+    hypotheses.endpoint_checksum as actual_endpoint_checksum
 from eligible
-left join
-    hypotheses
-    on eligible.identity_run_observation_key = hypotheses.identity_run_observation_key
-where hypotheses.identity_run_observation_key is null
-
-union all
-
-select
-'HYPOTHESIS_WITHOUT_ELIGIBLE',
-hypotheses.identity_run_observation_key
-from hypotheses
-left join
-eligible
-on hypotheses.identity_run_observation_key = eligible.identity_run_observation_key
-where eligible.identity_run_observation_key is null
+cross join hypotheses
+where
+    eligible.observation_count <> hypotheses.observation_count
+    or eligible.endpoint_checksum <> hypotheses.endpoint_checksum

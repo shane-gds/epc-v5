@@ -41,7 +41,7 @@ Statuses used below:
 | Location input | Explicit ONSUD `DEC_2025` required-UPRN outcomes | 17,929,367 UPRNs |
 | Identity candidates | Complete for current benchmark policy | 26,301,482 pairs |
 | Identity scoring | Complete, explicitly uncalibrated | 26,301,482 Splink scores |
-| Identity decisions | Review decisions complete; hypothesis closure partial | 26,301,482 review decisions |
+| Identity outcomes | Review decisions and singleton/unresolved closure complete | 54,869,297 hypotheses |
 | Core registries and facts | Not started | Planned after Phase 2 gates |
 | Current-state and MEES marts | Not started | Planned Phase 5 |
 | Graph export | Not started | Planned Phase 6 |
@@ -338,6 +338,16 @@ but repeated observations can represent corroboration rather than mutually exclu
 premises targets. These ranks cannot drive acceptance until target-group semantics are
 defined.
 
+### IMP-023: Use single-thread execution for high-cardinality endpoint aggregation
+
+**Status:** Accepted operational profile
+
+Both combined and left-only endpoint aggregation exceeded the 12 GB DuckDB memory limit
+with four execution threads. Running the same left aggregation with one DuckDB thread
+succeeded in 69 seconds without increasing memory. High-cardinality identity aggregation
+commands therefore use `EPC_V4_DUCKDB_THREADS=1`; profile memory and thread limits are
+environment-overridable and recorded with execution evidence.
+
 ## 6. Validation evidence
 
 The latest completed pre-Phase-2 validation on 15 July 2026 produced:
@@ -351,6 +361,18 @@ The latest completed pre-Phase-2 validation on 15 July 2026 produced:
 - Quarantine incremental idempotency confirmed with original timestamps unchanged.
 - Explicit adversarial fixtures passing for strict integer parsing, EPC conflict
   classification, ONSUD conflict classification and recommendation-parent outcomes.
+
+The completed Phase 2 identity checkpoint later on 15 July 2026 produced:
+
+- 96 of 96 identity and singular acceptance tests passing.
+- 110 of 110 complementary non-identity/source tests passing.
+- 206 of 206 dbt tests passing in two bounded processes.
+- 8 of 8 Python tests passing.
+- dbt parsing, Ruff and SQLFluff model lint passing.
+- Candidate, score and decision counts reconciled at 26,301,482.
+- Eligible identity observations and hypotheses reconciled by count and an
+  order-independent endpoint checksum at 54,869,297.
+- Zero accepted edges and zero promoted registry records under the uncalibrated policy.
 
 ## 7. Active Phase 2 plan
 
@@ -509,6 +531,31 @@ The following sequence is active. This section will be updated as work progresse
 - Current database size is approximately 89 GB with approximately 197 GB free.
 - Next action: rerun only the failed left endpoint stage with reduced DuckDB execution
   threads or a higher tested memory limit, then build hypothesis/singleton closure.
+
+### 2026-07-15 12:34 UTC: Memory-bounded hypothesis closure completed
+
+- Made dbt concurrency, DuckDB execution threads, memory and maximum spill size explicit
+  environment-controlled profile settings.
+- Rebuilt only `identity_observation_candidate_summary_l` with
+  `EPC_V4_DUCKDB_THREADS=1`; it completed in 69 seconds at the existing 12 GB limit.
+- Combined endpoint summary completed in 41 seconds.
+- National hypothesis materialisation completed in 6 minutes 3 seconds.
+- Current outcomes:
+
+| Outcome | Observations | Candidate endpoints |
+|---|---:|---:|
+| `SINGLETON_NO_CANDIDATE` | 24,945,047 | 0 |
+| `UNRESOLVED_REVIEW` | 29,924,250 | 52,602,964 |
+| **Total hypotheses** | **54,869,297** | **52,602,964** |
+
+- Maximum candidate fan-out for one endpoint is 501.
+- `identity_cluster_membership` exposes one singleton or unresolved-review membership per
+  eligible observation. No review-only edge creates a multi-observation component.
+- Replaced the memory-heavy population anti-join gate with count plus order-independent
+  endpoint checksum reconciliation; runtime reduced from an OOM after 68 seconds to a
+  pass in 9 seconds.
+- The full 206 dbt tests passed in bounded identity (96) and complementary (110) suites.
+- Database size is approximately 94 GB with approximately 192 GB free.
 
 ## 9. Open decisions and governance dependencies
 
