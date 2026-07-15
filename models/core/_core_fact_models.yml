@@ -1,0 +1,76 @@
+version: 2
+
+models:
+  - name: fct_sale_transaction
+    description: One immutable typed PPD transaction/status fact without subject identity.
+    columns:
+      - name: sale_transaction_key
+        data_tests: [not_null, unique]
+      - name: transaction_id
+        data_tests: [not_null, unique]
+      - name: currency_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [GBP]
+      - name: record_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [ACTIVE, CORRECTED, DELETED, UNKNOWN]
+      - name: source_record_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_pp_transaction_observation')
+                field: source_record_key
+
+  - name: fct_epc_certificate
+    description: One canonical certificate observation per publisher release and natural key.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [release_key, certificate_number]
+    columns:
+      - name: epc_certificate_key
+        data_tests: [not_null, unique]
+      - name: certificate_number
+        data_tests: [not_null]
+      - name: certificate_record_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [OBSERVED]
+      - name: source_record_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_epc_certificate_observation')
+                field: source_record_key
+
+  - name: fct_epc_recommendation_observation
+    description: One immutable recommendation item observation with parent-or-orphan outcome.
+    columns:
+      - name: epc_recommendation_key
+        data_tests: [not_null, unique]
+      - name: source_record_key
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_epc_recommendation_observation')
+                field: source_record_key
+      - name: epc_certificate_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('fct_epc_certificate')
+                field: epc_certificate_key
+      - name: recommendation_record_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [OBSERVED]

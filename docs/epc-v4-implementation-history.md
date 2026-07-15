@@ -43,7 +43,8 @@ Statuses used below:
 | Identity scoring | Complete, explicitly uncalibrated | 26,301,482 Splink scores |
 | Identity outcomes | Review decisions and singleton/unresolved closure complete | 54,869,297 hypotheses |
 | Calibration | Deterministic sample ready; explicit labels pending | 1,104 blank-label rows |
-| Core registries and facts | Not started | Planned after Phase 2 gates |
+| Core atomic facts | Sale, EPC and recommendation facts complete | 142,368,834 facts |
+| Core registries | Persistent foundations empty pending calibrated promotion | 0 promoted entities |
 | Current-state and MEES marts | Not started | Planned Phase 5 |
 | Graph export | Not started | Planned Phase 6 |
 
@@ -385,6 +386,16 @@ Threshold evaluation refuses to run until the configured minimum number of activ
 manual `MATCH`/`NO_MATCH` labels exists and both classes are present. Evaluation output
 is evidence-only and cannot update decision policy or registry promotion automatically.
 
+### IMP-028: Keep atomic facts independent of evolving subject identity
+
+**Status:** Accepted
+
+Sale transactions, EPC certificates and recommendation observations are immutable source
+facts. They retain publisher release and row lineage but do not contain dwelling,
+building, premises-candidate, subject or registry foreign keys. Subject assignment will
+be represented by separate versioned assertion models only after calibrated identity
+decisions exist.
+
 ## 6. Validation evidence
 
 The latest completed pre-Phase-2 validation on 15 July 2026 produced:
@@ -413,6 +424,7 @@ The completed Phase 2 identity checkpoint later on 15 July 2026 produced:
 - 136 of 136 identity, target-group, calibration-source and singular tests passing after
   calibration framework materialisation.
 - 11 of 11 Python tests passing.
+- 25 of 25 atomic core fact tests passing.
 
 ## 7. Active Phase 2 plan
 
@@ -651,6 +663,38 @@ The following sequence is active. This section will be updated as work progresse
 - Complete identity/calibration/singular dbt suite: 136 of 136 passing.
 - Python tests: 11 of 11 passing; dbt parse, Ruff and SQLFluff model lint pass.
 - Database size is approximately 118 GB with approximately 168 GB free.
+
+### 2026-07-15 15:19 UTC: Identity-independent atomic core facts
+
+- Explicit manual labels remain unavailable, so calibrated identity acceptance and
+  registry promotion remain blocked.
+- Proceeded with identity-independent atomic facts from section 14 of the design:
+  - `core.fct_sale_transaction`
+  - `core.fct_epc_certificate`
+  - `core.fct_epc_recommendation_observation`
+- PPD currently contains only publisher status `A`; the contract still preserves
+  `ACTIVE`, `CORRECTED`, `DELETED` and `UNKNOWN` interpretations for future releases.
+- Sale fact materialisation completed in 2 minutes 3 seconds.
+- Initial EPC canonicalisation used a full-population row-number window and exceeded the
+  12 GB memory limit; no certificate table committed.
+- Replaced it with duplicate-only deterministic representative selection. Unique
+  certificates stream directly, while actual duplicate keys alone require aggregation.
+- EPC certificate materialisation completed in 4 minutes 30 seconds.
+- Recommendation materialisation completed in 8 minutes 13 seconds.
+- National fact counts:
+
+| Fact | Rows |
+|---|---:|
+| `fct_sale_transaction` | 31,346,259 |
+| `fct_epc_certificate` | 23,573,781 |
+| `fct_epc_recommendation_observation` | 87,448,794 |
+| **Total** | **142,368,834** |
+
+- All certificate facts are currently `UNIQUE` under the release/natural-key contract.
+- Recommendation parent outcomes: 87,448,787 matched and seven explicit orphans.
+- No atomic fact exposes subject, dwelling, building or registry identity.
+- Atomic fact dbt tests: 25 of 25 passing.
+- Database size is approximately 134 GB with approximately 153 GB free.
 
 ## 9. Open decisions and governance dependencies
 
