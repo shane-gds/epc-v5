@@ -1,0 +1,109 @@
+version: 2
+
+models:
+  - name: stg_pp_transaction_observation
+    description: One accepted, typed PPD source-row observation; no premises identity assertion.
+    columns:
+      - name: source_record_key
+        data_tests: [not_null, unique]
+      - name: transaction_id
+        data_tests: [not_null, unique]
+      - name: transfer_date
+        data_tests: [not_null]
+      - name: price_paid
+        data_tests: [not_null]
+      - name: postcode_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, MISSING, INVALID]
+      - name: parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID]
+
+  - name: stg_epc_certificate_observation
+    description: One accepted, typed EPC source-row observation retaining assessment evidence.
+    columns:
+      - name: source_record_key
+        data_tests: [not_null, unique]
+      - name: certificate_number
+        data_tests: [not_null]
+      - name: inspection_date
+        data_tests: [not_null]
+      - name: lodgement_date
+        data_tests: [not_null]
+      - name: uprn_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, MISSING, INVALID]
+      - name: certificate_conflict_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [UNIQUE, EXACT_DUPLICATE, CONFLICT]
+      - name: chronology_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, INSPECTION_AFTER_LODGEMENT]
+
+  - name: stg_epc_recommendation_observation
+    description: One accepted EPC recommendation source-row with cautious cost interpretation.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [certificate_number, improvement_item]
+    columns:
+      - name: source_record_key
+        data_tests: [not_null, unique]
+      - name: certificate_number
+        data_tests: [not_null]
+      - name: improvement_item
+        data_tests: [not_null]
+      - name: parent_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [MATCHED_CERTIFICATE, ORPHAN_CERTIFICATE, CONFLICTING_CERTIFICATE]
+      - name: cost_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - RANGE_PARSED
+                  - SINGLE_VALUE_PARSED
+                  - MISSING
+                  - BARE_NUMBER_UNSUPPORTED
+                  - ENCODING_ERROR
+                  - NON_GBP_CURRENCY
+                  - UNSUPPORTED_FORMAT
+                  - INVALID_BOUNDS
+                  - NUMERIC_OVERFLOW
+
+  - name: stg_onsud_uprn_allocation
+    description: One distinct typed ONSUD allocation tuple per release and UPRN.
+    columns:
+      - name: onsud_allocation_key
+        data_tests: [not_null, unique]
+      - name: dataset_release_id
+        data_tests: [not_null]
+      - name: uprn
+        data_tests: [not_null]
+      - name: allocation_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [UNIQUE, EXACT_DUPLICATE, CONFLICT]
+      - name: postcode_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, MISSING, INVALID]
+      - name: coordinate_parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, MISSING, PARTIAL, OUT_OF_BOUNDS]

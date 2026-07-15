@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: int_required_uprn
+    description: One distinct EPC-required UPRN under an explicit ONSUD release.
+    columns:
+      - name: required_uprn_key
+        data_tests: [not_null, unique]
+      - name: uprn
+        data_tests: [not_null, unique]
+      - name: onsud_release_label
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [DEC_2025]
+
+  - name: int_uprn_location
+    description: One cautious ONSUD location-resolution outcome per required UPRN.
+    columns:
+      - name: uprn_location_key
+        data_tests: [not_null, unique]
+      - name: required_uprn_key
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('int_required_uprn')
+                field: required_uprn_key
+      - name: location_resolution_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [RESOLVED_UNIQUE, MISSING_IN_RELEASE, CONFLICTING_ALLOCATIONS]

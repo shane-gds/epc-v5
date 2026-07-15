@@ -5,7 +5,13 @@ import logging
 from pathlib import Path
 
 from epc_v4 import __version__
-from epc_v4.import_sources import default_config_path, import_status, load_settings, run_import
+from epc_v4.import_sources import (
+    default_config_path,
+    import_status,
+    load_settings,
+    publish_silver_reconciliation,
+    run_import,
+)
 
 
 def main() -> None:
@@ -30,6 +36,13 @@ def main() -> None:
     status_parser.add_argument("--config", type=Path, default=default_config_path())
     status_parser.add_argument("--database", type=Path)
 
+    publish_parser = subparsers.add_parser(
+        "publish-silver-reconciliation",
+        help="Publish tested Silver row counts to source manifests",
+    )
+    publish_parser.add_argument("--config", type=Path, default=default_config_path())
+    publish_parser.add_argument("--database", type=Path)
+
     args = parser.parse_args()
     if args.command == "import-sources":
         logging.basicConfig(
@@ -47,6 +60,10 @@ def main() -> None:
         settings = load_settings(args.config, database_path=args.database)
         for row in import_status(settings.database_path):
             print(" | ".join("" if value is None else str(value) for value in row))
+    elif args.command == "publish-silver-reconciliation":
+        settings = load_settings(args.config, database_path=args.database)
+        published_count = publish_silver_reconciliation(settings.database_path)
+        print(f"Published Silver reconciliation for {published_count} source files")
     else:
         print(f"epc-v4 {__version__}")
 

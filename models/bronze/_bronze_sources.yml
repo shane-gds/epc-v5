@@ -12,7 +12,19 @@ sources:
           - name: source_record_key
             data_tests: [not_null, unique]
           - name: source_file_id
-            data_tests: [not_null]
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_source_file')
+                    field: source_file_id
+          - name: dataset_release_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_dataset_release')
+                    field: dataset_release_id
           - name: source_row_number
             data_tests: [not_null]
           - name: transaction_id_raw
@@ -25,7 +37,19 @@ sources:
           - name: source_record_key
             data_tests: [not_null, unique]
           - name: source_file_id
-            data_tests: [not_null]
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_source_file')
+                    field: source_file_id
+          - name: dataset_release_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_dataset_release')
+                    field: dataset_release_id
           - name: source_row_number
             data_tests: [not_null]
           - name: certificate_number_raw
@@ -38,7 +62,19 @@ sources:
           - name: source_record_key
             data_tests: [not_null, unique]
           - name: source_file_id
-            data_tests: [not_null]
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_source_file')
+                    field: source_file_id
+          - name: dataset_release_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_dataset_release')
+                    field: dataset_release_id
           - name: source_row_number
             data_tests: [not_null]
           - name: certificate_number_raw
@@ -51,7 +87,19 @@ sources:
           - name: source_record_key
             data_tests: [not_null, unique]
           - name: source_file_id
-            data_tests: [not_null]
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_source_file')
+                    field: source_file_id
+          - name: dataset_release_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('audit_ingestion', 'audit_dataset_release')
+                    field: dataset_release_id
           - name: source_row_number
             data_tests: [not_null]
           - name: uprn_raw

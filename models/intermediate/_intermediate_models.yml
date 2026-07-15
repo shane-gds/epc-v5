@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: bridge_onsud_allocation_source_record
+    description: One accepted ONSUD source row linked to one contracted allocation tuple.
+    columns:
+      - name: source_record_key
+        data_tests: [not_null, unique]
+      - name: onsud_allocation_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_onsud_uprn_allocation')
+                field: onsud_allocation_key

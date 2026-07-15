@@ -869,5 +869,93 @@ def import_status(database_path: Path) -> list[tuple[Any, ...]]:
         connection.close()
 
 
+def publish_silver_reconciliation(database_path: Path) -> int:
+    """Publish tested Silver accepted/quarantined counts to source manifests."""
+    connection = duckdb.connect(str(database_path))
+    try:
+        failure_count = connection.execute(
+            """
+            select count(*)
+            from audit.audit_source_file_silver_reconciliation
+            where reconciliation_status <> 'PASSED'
+            """
+        ).fetchone()[0]
+        if failure_count:
+            raise RuntimeError(
+                f"Cannot publish Silver reconciliation: {failure_count} file(s) failed"
+            )
+
+        expected_leaf_count = connection.execute(
+            """
+            select count(*)
+            from audit.audit_source_file
+            where file_kind in ('CSV', 'ZIP_MEMBER_CSV')
+              and ingestion_status = 'LOADED'
+            """
+        ).fetchone()[0]
+        leaf_count, distinct_leaf_count = connection.execute(
+            """
+            select count(*), count(distinct source_file_id)
+            from audit.audit_source_file_silver_reconciliation
+            """
+        ).fetchone()
+        if leaf_count != expected_leaf_count or distinct_leaf_count != expected_leaf_count:
+            raise RuntimeError(
+                "Cannot publish Silver reconciliation: expected "
+                f"{expected_leaf_count} loaded source files, found {leaf_count} rows "
+                f"for {distinct_leaf_count} distinct files"
+            )
+
+        stale_count = connection.execute(
+            """
+            select count(*)
+            from audit.audit_source_file_silver_reconciliation as reconciliation
+            inner join audit.audit_source_file as manifest
+                on reconciliation.source_file_id = manifest.source_file_id
+            where reconciliation.reconciled_at < manifest.loaded_at
+            """
+        ).fetchone()[0]
+        if stale_count:
+            raise RuntimeError(
+                f"Cannot publish Silver reconciliation: {stale_count} file(s) are stale"
+            )
+
+        connection.execute("begin transaction")
+        try:
+            connection.execute(
+                """
+                update audit.audit_source_file as manifest
+                set accepted_row_count = reconciliation.silver_accepted_row_count,
+                    quarantined_row_count = reconciliation.silver_quarantined_row_count
+                from audit.audit_source_file_silver_reconciliation as reconciliation
+                where manifest.source_file_id = reconciliation.source_file_id
+                """
+            )
+            connection.execute(
+                """
+                update audit.audit_source_file as archive
+                set accepted_row_count = child.accepted_row_count,
+                    quarantined_row_count = child.quarantined_row_count
+                from (
+                    select
+                        parent_source_file_id,
+                        sum(accepted_row_count) as accepted_row_count,
+                        sum(quarantined_row_count) as quarantined_row_count
+                    from audit.audit_source_file
+                    where parent_source_file_id is not null
+                    group by parent_source_file_id
+                ) as child
+                where archive.source_file_id = child.parent_source_file_id
+                """
+            )
+            connection.execute("commit")
+        except Exception:
+            connection.execute("rollback")
+            raise
+        return int(leaf_count)
+    finally:
+        connection.close()
+
+
 def default_config_path() -> Path:
     return Path(os.environ.get("EPC_V4_IMPORT_CONFIG", "config/source_import.yml"))

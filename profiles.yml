@@ -11,5 +11,4 @@ epc_v4:
       settings:
         preserve_insertion_order: false
         memory_limit: "12GB"
-        temp_directory: "{{ env_var('EPC_V4_TEMP_DIR', 'output/tmp') }}"
         max_temp_directory_size: "70GB"

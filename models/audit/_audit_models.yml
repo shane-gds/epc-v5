@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: quarantine_source_record
+    description: One fatal Silver validation rule failure per immutable source row.
+    columns:
+      - name: quarantine_event_key
+        data_tests: [not_null, unique]
+      - name: source_record_key
+        data_tests: [not_null]
+      - name: source_file_id
+        data_tests: [not_null]
+      - name: rule_code
+        data_tests: [not_null]
+      - name: replay_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [NOT_REPLAYED, REPLAY_SUCCEEDED, REPLAY_FAILED]
+
+  - name: audit_source_file_silver_reconciliation
+    description: One leaf source-file reconciliation from Bronze through Silver/quarantine.
+    columns:
+      - name: source_file_id
+        data_tests: [not_null, unique]
+      - name: reconciliation_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [PASSED]
+
+  - name: audit_silver_quality_profile
+    description: One compact national Silver quality metric per dataset and metric name.
+    columns:
+      - name: quality_metric_key
+        data_tests: [not_null, unique]
+      - name: metric_value
+        data_tests: [not_null]

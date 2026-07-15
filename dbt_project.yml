@@ -15,6 +15,9 @@ snapshot-paths: ["snapshots"]
 target-path: target
 clean-targets: ["target", "dbt_packages", "logs"]
 
+vars:
+  onsud_release_label: DEC_2025
+
 models:
   epc_v4:
     audit:

@@ -1,0 +1,55 @@
+version: 2
+
+models:
+  - name: int_identity_current_run
+    description: The deterministic identity-run definition for the currently loaded PP/EPC inputs.
+    columns:
+      - name: identity_run_id
+        data_tests: [not_null, unique]
+      - name: identity_run_key
+        data_tests: [not_null, unique]
+      - name: population_fingerprint
+        data_tests: [not_null]
+
+  - name: identity_run_manifest
+    description: Append-only registry of immutable identity input populations.
+    columns:
+      - name: identity_run_id
+        data_tests: [not_null, unique]
+      - name: identity_run_key
+        data_tests: [not_null, unique]
+      - name: population_fingerprint
+        data_tests: [not_null]
+
+  - name: int_identity_observation
+    description: One accepted PP or EPC source observation per immutable identity-run population.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [identity_run_key, source_record_key]
+    columns:
+      - name: identity_observation_key
+        data_tests: [not_null, unique]
+      - name: identity_run_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('identity_run_manifest')
+                field: identity_run_id
+      - name: source_record_key
+        data_tests: [not_null]
+      - name: source_dataset
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [PPD, EPC_CERTIFICATE]
+      - name: eligibility_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - ELIGIBLE
+                  - INELIGIBLE_MISSING_ADDRESS
+                  - INELIGIBLE_MISSING_POSTCODE
+                  - INELIGIBLE_INVALID_POSTCODE

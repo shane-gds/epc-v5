@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import csv
+import uuid
 import zipfile
 from pathlib import Path
 
 import duckdb
+import pytest
 import yaml
 
-from epc_v4.import_sources import run_import
+from epc_v4.import_sources import publish_silver_reconciliation, run_import
 
 
 def _source_metadata(dataset_code: str, file_name: str) -> dict[str, object]:
@@ -126,3 +128,107 @@ def test_archive_members_load_separately_and_temporary_files_are_removed(
         connection.close()
 
     assert list((tmp_path / "output" / "tmp").iterdir()) == []
+
+
+def _create_reconciliation_fixture(database_path: Path, status: str) -> tuple[uuid.UUID, ...]:
+    parent_id, first_id, second_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    connection = duckdb.connect(str(database_path))
+    try:
+        connection.execute("create schema audit")
+        connection.execute(
+            """
+            create table audit.audit_source_file (
+                source_file_id uuid,
+                parent_source_file_id uuid,
+                file_kind varchar,
+                ingestion_status varchar,
+                loaded_at timestamptz,
+                accepted_row_count ubigint,
+                quarantined_row_count ubigint
+            )
+            """
+        )
+        connection.execute(
+            """
+            create table audit.audit_source_file_silver_reconciliation (
+                source_file_id uuid,
+                silver_accepted_row_count ubigint,
+                silver_quarantined_row_count ubigint,
+                reconciliation_status varchar,
+                reconciled_at timestamptz
+            )
+            """
+        )
+        connection.executemany(
+            """
+            insert into audit.audit_source_file
+            values (?, ?, ?, 'LOADED', current_timestamp, 0, 0)
+            """,
+            [
+                (parent_id, None, "ZIP_ARCHIVE"),
+                (first_id, parent_id, "ZIP_MEMBER_CSV"),
+                (second_id, parent_id, "ZIP_MEMBER_CSV"),
+            ],
+        )
+        connection.executemany(
+            """
+            insert into audit.audit_source_file_silver_reconciliation
+            values (?, ?, ?, ?, current_timestamp)
+            """,
+            [(first_id, 9, 1, status), (second_id, 20, 0, "PASSED")],
+        )
+    finally:
+        connection.close()
+    return parent_id, first_id, second_id
+
+
+def test_publish_silver_reconciliation_updates_leaf_and_archive_counts(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "reconciliation.duckdb"
+    parent_id, first_id, second_id = _create_reconciliation_fixture(database_path, "PASSED")
+
+    assert publish_silver_reconciliation(database_path) == 2
+
+    connection = duckdb.connect(str(database_path), read_only=True)
+    try:
+        assert connection.execute(
+            """
+            select source_file_id, accepted_row_count, quarantined_row_count
+            from audit.audit_source_file
+            order by source_file_id
+            """
+        ).fetchall() == sorted(
+            [(parent_id, 29, 1), (first_id, 9, 1), (second_id, 20, 0)],
+            key=lambda row: row[0],
+        )
+    finally:
+        connection.close()
+
+
+def test_publish_silver_reconciliation_rejects_failed_files(tmp_path: Path) -> None:
+    database_path = tmp_path / "reconciliation.duckdb"
+    _create_reconciliation_fixture(database_path, "FAILED")
+
+    with pytest.raises(RuntimeError, match=r"1 file\(s\) failed"):
+        publish_silver_reconciliation(database_path)
+
+
+def test_publish_silver_reconciliation_requires_complete_file_coverage(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "reconciliation.duckdb"
+    _create_reconciliation_fixture(database_path, "PASSED")
+    connection = duckdb.connect(str(database_path))
+    try:
+        connection.execute(
+            """
+            delete from audit.audit_source_file_silver_reconciliation
+            where silver_accepted_row_count = 9
+            """
+        )
+    finally:
+        connection.close()
+
+    with pytest.raises(RuntimeError, match="expected 2 loaded source files"):
+        publish_silver_reconciliation(database_path)
