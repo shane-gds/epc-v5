@@ -1,0 +1,43 @@
+database_path: output/duckdb/epc_v4.duckdb
+data_root: data/raw/epc project data files
+temp_directory: output/tmp/source_import
+memory_limit: 12GB
+threads: 4
+min_free_gib: 15
+
+sources:
+  pp:
+    dataset_code: PPD
+    publisher: HM Land Registry
+    release_label: UNKNOWN_LEGACY_COPY_2026-07-14
+    release_label_status: LOCAL_CONTROL_LABEL
+    release_date: null
+    retrieval_status: UNKNOWN_LEGACY_COPY
+    source_url: https://www.gov.uk/government/statistical-data-sets/price-paid-data-downloads
+    licence_url: null
+    licence_status: REQUIRES_REVIEW
+    file: pp-complete.csv
+
+  epc:
+    dataset_code: EPC_DOMESTIC_BULK
+    publisher: Ministry of Housing, Communities and Local Government
+    release_label: UNKNOWN_LEGACY_COPY_2026-07-14
+    release_label_status: LOCAL_CONTROL_LABEL
+    release_date: null
+    retrieval_status: UNKNOWN_LEGACY_COPY
+    source_url: https://epc.opendatacommunities.org/
+    licence_url: null
+    licence_status: REQUIRES_REVIEW
+    file: domestic-csv.zip
+
+  onsud:
+    dataset_code: ONSUD
+    publisher: Office for National Statistics
+    release_label: DEC_2025
+    release_label_status: PUBLISHER_LABEL_FROM_ARCHIVE
+    release_date: null
+    retrieval_status: UNKNOWN_LEGACY_COPY
+    source_url: https://www.ons.gov.uk/methodology/geography/geographicalproducts/nationalstatisticsaddressproducts
+    licence_url: null
+    licence_status: REQUIRES_REVIEW
+    file: ONSUD_DEC_2025.zip

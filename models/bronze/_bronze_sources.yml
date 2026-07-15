@@ -1,0 +1,58 @@
+version: 2
+
+sources:
+  - name: bronze_ingestion
+    description: Immutable source-shaped rows loaded by the audited external I/O helper.
+    schema: bronze
+    tables:
+      - name: raw_pp_transaction
+        description: One supplied HM Land Registry Price Paid Data row.
+        loaded_at_field: loaded_at
+        columns:
+          - name: source_record_key
+            data_tests: [not_null, unique]
+          - name: source_file_id
+            data_tests: [not_null]
+          - name: source_row_number
+            data_tests: [not_null]
+          - name: transaction_id_raw
+            data_tests: [not_null]
+
+      - name: raw_epc_certificate
+        description: One supplied domestic EPC certificate row from one annual archive member.
+        loaded_at_field: loaded_at
+        columns:
+          - name: source_record_key
+            data_tests: [not_null, unique]
+          - name: source_file_id
+            data_tests: [not_null]
+          - name: source_row_number
+            data_tests: [not_null]
+          - name: certificate_number_raw
+            data_tests: [not_null]
+
+      - name: raw_epc_recommendation
+        description: One supplied domestic EPC recommendation row from one annual archive member.
+        loaded_at_field: loaded_at
+        columns:
+          - name: source_record_key
+            data_tests: [not_null, unique]
+          - name: source_file_id
+            data_tests: [not_null]
+          - name: source_row_number
+            data_tests: [not_null]
+          - name: certificate_number_raw
+            data_tests: [not_null]
+
+      - name: raw_onsud_uprn
+        description: One supplied ONSUD UPRN allocation row from one regional archive member.
+        loaded_at_field: loaded_at
+        columns:
+          - name: source_record_key
+            data_tests: [not_null, unique]
+          - name: source_file_id
+            data_tests: [not_null]
+          - name: source_row_number
+            data_tests: [not_null]
+          - name: uprn_raw
+            data_tests: [not_null]

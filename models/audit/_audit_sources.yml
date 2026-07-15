@@ -1,0 +1,45 @@
+version: 2
+
+sources:
+  - name: audit_ingestion
+    description: Operational source-release, file, and pipeline-run control facts.
+    schema: audit
+    tables:
+      - name: audit_dataset_release
+        description: One registered publisher dataset release or explicit local control release.
+        columns:
+          - name: dataset_release_id
+            data_tests: [not_null, unique]
+          - name: release_key
+            data_tests: [not_null, unique]
+          - name: status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [REGISTERED, PARTIAL, LOADED, FAILED]
+
+      - name: audit_source_file
+        description: One archive, direct CSV, or archive-member content manifest.
+        columns:
+          - name: source_file_id
+            data_tests: [not_null, unique]
+          - name: dataset_release_id
+            data_tests: [not_null]
+          - name: content_sha256
+            data_tests: [not_null]
+          - name: ingestion_status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [REGISTERED, LOADING, PARTIAL, LOADED, FAILED]
+
+      - name: audit_pipeline_run
+        description: One invocation of the bounded source importer.
+        columns:
+          - name: pipeline_run_id
+            data_tests: [not_null, unique]
+          - name: run_status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [RUNNING, SUCCEEDED, FAILED]

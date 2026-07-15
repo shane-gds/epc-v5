@@ -1,0 +1,15 @@
+epc_v4:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('EPC_V4_DUCKDB_PATH', 'output/duckdb/epc_v4.duckdb') }}"
+      schema: main
+      threads: 4
+      extensions:
+        - spatial
+      settings:
+        preserve_insertion_order: false
+        memory_limit: "12GB"
+        temp_directory: "{{ env_var('EPC_V4_TEMP_DIR', 'output/tmp') }}"
+        max_temp_directory_size: "70GB"

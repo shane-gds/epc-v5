@@ -1,0 +1,47 @@
+# Python
+.venv/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# dbt
+target/
+logs/
+dbt_packages/
+.user.yml
+
+# Environment and secrets
+.env
+*.pem
+*.key
+
+# Data and generated artefacts
+data/raw/**
+data/reference/**
+data/customer/**
+!data/raw/.gitkeep
+!data/reference/.gitkeep
+!data/customer/.gitkeep
+
+output/**
+!output/.gitkeep
+
+# DuckDB and temporary data
+*.duckdb
+*.duckdb.wal
+*.db
+*.db.wal
+
+# Neo4j exports and services
+neo4j/data/
+neo4j/logs/
+neo4j/plugins/
+
+# Editors and OS
+.vscode/settings.local.json
+.idea/
+.DS_Store

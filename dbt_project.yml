@@ -1,0 +1,56 @@
+name: epc_v4
+version: 4.0.0
+config-version: 2
+
+profile: epc_v4
+require-dbt-version: [">=1.10.0", "<2.0.0"]
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: target
+clean-targets: ["target", "dbt_packages", "logs"]
+
+models:
+  epc_v4:
+    audit:
+      +schema: audit
+      +materialized: table
+      +tags: [audit]
+    bronze:
+      +schema: bronze
+      +materialized: incremental
+      +tags: [bronze]
+    silver:
+      +schema: silver
+      +materialized: table
+      +tags: [silver]
+    identity:
+      +schema: identity
+      +materialized: table
+      +tags: [identity]
+    intermediate:
+      +schema: intermediate
+      +materialized: table
+      +tags: [intermediate]
+    core:
+      +schema: core
+      +materialized: table
+      +tags: [core]
+    mart:
+      +schema: mart
+      +materialized: table
+      +tags: [mart]
+    graph_export:
+      +schema: graph_export
+      +materialized: table
+      +tags: [graph_export]
+
+seeds:
+  epc_v4:
+    +schema: reference
+    +quote_columns: false
