@@ -20,6 +20,8 @@ with invalid_outcomes as (
                 or onsud_source_record_count is not null
                 or coordinate_key is not null
                 or source_crs is not null
+                or target_crs is not null
+                or transform_contract_version is not null
             )
         )
         or (
@@ -27,8 +29,28 @@ with invalid_outcomes as (
             and (
                 allocation_tuple_count <> 1
                 or onsud_allocation_key is null
-                or (coordinate_parse_status = 'VALID' and coordinate_key is null)
-                or (coordinate_parse_status <> 'VALID' and coordinate_key is not null)
+                or (
+                    coordinate_parse_status = 'VALID'
+                    and (
+                        easting is null
+                        or northing is null
+                        or coordinate_key is null
+                        or source_crs is null
+                        or target_crs is null
+                        or transform_contract_version is null
+                    )
+                )
+                or (
+                    coordinate_parse_status <> 'VALID'
+                    and (
+                        easting is not null
+                        or northing is not null
+                        or coordinate_key is not null
+                        or source_crs is not null
+                        or target_crs is not null
+                        or transform_contract_version is not null
+                    )
+                )
             )
         )
         or (
@@ -40,6 +62,9 @@ with invalid_outcomes as (
                 or easting is not null
                 or northing is not null
                 or coordinate_key is not null
+                or source_crs is not null
+                or target_crs is not null
+                or transform_contract_version is not null
             )
         )
 ),

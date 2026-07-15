@@ -23,6 +23,12 @@ vars:
   identity_blocking_policy_version: identity_blocking_benchmark_v1
   identity_comparison_model_version: splink_benchmark_v1
   identity_decision_policy_version: identity_decision_uncalibrated_v1
+  coordinate_rounding_scale: 3
+  coordinate_source_crs: EPSG:27700
+  coordinate_target_crs: EPSG:4326
+  coordinate_transform_contract_version: bng_wgs84_v1
+  coordinate_duckdb_version: v1.5.4
+  coordinate_spatial_extension_version: 28db190
 
 models:
   epc_v4:

@@ -76,11 +76,15 @@ select
             then candidate_postcode_sector
     end as postcode_sector,
     case
-        when location_resolution_status = 'RESOLVED_UNIQUE'
+        when
+            location_resolution_status = 'RESOLVED_UNIQUE'
+            and candidate_coordinate_parse_status = 'VALID'
             then candidate_easting
     end as easting,
     case
-        when location_resolution_status = 'RESOLVED_UNIQUE'
+        when
+            location_resolution_status = 'RESOLVED_UNIQUE'
+            and candidate_coordinate_parse_status = 'VALID'
             then candidate_northing
     end as northing,
     case
@@ -110,19 +114,26 @@ select
     case
         when
             location_resolution_status = 'RESOLVED_UNIQUE'
-            and candidate_coordinate_parse_status = 'VALID' then {{ stable_sha256(
-            'epc-v4.location.coordinate-pair',
-            'v1',
-            [
-                "'EPSG:27700'",
-                'cast(candidate_easting as varchar)',
-                'cast(candidate_northing as varchar)'
-            ]
-        ) }}
+            and candidate_coordinate_parse_status = 'VALID'
+            then {{ bng_wgs84_coordinate_key('candidate_easting', 'candidate_northing') }}
     end as coordinate_key,
     case
-        when location_resolution_status = 'RESOLVED_UNIQUE'
-            then 'EPSG:27700'
+        when
+            location_resolution_status = 'RESOLVED_UNIQUE'
+            and candidate_coordinate_parse_status = 'VALID'
+            then '{{ var("coordinate_source_crs") }}'
     end as source_crs,
-    'uprn_location_v1' as location_contract_version
+    case
+        when
+            location_resolution_status = 'RESOLVED_UNIQUE'
+            and candidate_coordinate_parse_status = 'VALID'
+            then '{{ var("coordinate_target_crs") }}'
+    end as target_crs,
+    case
+        when
+            location_resolution_status = 'RESOLVED_UNIQUE'
+            and candidate_coordinate_parse_status = 'VALID'
+            then '{{ var("coordinate_transform_contract_version") }}'
+    end as transform_contract_version,
+    'uprn_location_v2' as location_contract_version
 from classified

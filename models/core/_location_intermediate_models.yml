@@ -32,3 +32,111 @@ models:
           - accepted_values:
               arguments:
                 values: [RESOLVED_UNIQUE, MISSING_IN_RELEASE, CONFLICTING_ALLOCATIONS]
+
+  - name: int_postcode_coordinate_point
+    description: One distinct valid ONSUD BNG point per release and unit postcode.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [onsud_release_key, postcode, easting, northing]
+    columns:
+      - name: postcode_coordinate_point_key
+        data_tests: [not_null, unique]
+      - name: postcode
+        data_tests: [not_null]
+      - name: postcode_sector
+        data_tests: [not_null]
+      - name: allocation_tuple_count
+        data_tests: [not_null]
+
+  - name: int_postcode_coordinate
+    description: One approximate unit-postcode centroid per explicit ONSUD release.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [onsud_release_key, postcode]
+    columns:
+      - name: postcode_coordinate_key
+        data_tests: [not_null, unique]
+      - name: coordinate_key
+        data_tests: [not_null]
+      - name: postcode
+        data_tests: [not_null]
+      - name: coordinate_method
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [POSTCODE_CENTROID]
+      - name: spread_method
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [BOUNDING_BOX_DIAGONAL]
+
+  - name: int_postcode_sector_coordinate
+    description: One equally weighted unit-postcode centroid per true postcode sector and release.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [onsud_release_key, postcode_sector]
+    columns:
+      - name: postcode_sector_coordinate_key
+        data_tests: [not_null, unique]
+      - name: coordinate_key
+        data_tests: [not_null]
+      - name: postcode_sector
+        data_tests: [not_null]
+      - name: coordinate_method
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [POSTCODE_SECTOR_CENTROID]
+      - name: centroid_weighting_method
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [UNIT_POSTCODE_EQUAL_WEIGHT]
+
+  - name: int_required_coordinate_pair
+    description: One canonical BNG pair and transform contract requested by approved location methods.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [easting, northing, source_crs, target_crs, transform_contract_version]
+    columns:
+      - name: coordinate_key
+        data_tests: [not_null, unique]
+      - name: coordinate_method_count
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 3
+      - name: validation_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, OUT_OF_BOUNDS]
+
+  - name: int_coordinate_wgs84
+    description: One cached WGS84 transform per valid canonical BNG coordinate pair.
+    columns:
+      - name: coordinate_key
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('int_required_coordinate_pair')
+                field: coordinate_key
+      - name: longitude
+        data_tests: [not_null]
+      - name: latitude
+        data_tests: [not_null]
+      - name: spatial_extension_version
+        data_tests: [not_null]
+      - name: transform_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [VALID, OUT_OF_EXPECTED_BOUNDS]

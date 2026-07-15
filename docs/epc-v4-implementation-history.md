@@ -33,12 +33,13 @@ Statuses used below:
 
 | Area | Current state | Evidence |
 |---|---|---|
-| Source control | Private GitHub repository on `main` | Commits `cdf89cd`, `bdb8389` |
+| Source control | Private GitHub repository on `main` | Latest pushed commit `edd90f7` |
 | Audit and Bronze | Complete for current PPD, domestic EPC and ONSUD inputs | 42 leaf files reconciled |
 | Silver | Four canonical observation/allocation models complete | 183,755,287 accepted rows |
 | Quarantine | Append-only fatal-rule evidence | 11 EPC source rows |
 | Identity input | Run-versioned PP/EPC observation population | 54,920,040 observations |
 | Location input | Explicit ONSUD `DEC_2025` required-UPRN outcomes | 17,929,367 UPRNs |
+| Coordinate cache | Distinct BNG pairs transformed once to WGS84 | 16,264,097 pairs |
 | Identity candidates | Complete for current benchmark policy | 26,301,482 pairs |
 | Identity scoring | Complete, explicitly uncalibrated | 26,301,482 Splink scores |
 | Identity outcomes | Review decisions and singleton/unresolved closure complete | 54,869,297 hypotheses |
@@ -409,6 +410,32 @@ cost exists. Concept-mapping counts and coverage remain null with mapper status
 that has not been performed. Orphan recommendation facts remain authoritative standalone
 observations and reconcile outside certificate-level totals.
 
+### IMP-030: Canonicalise coordinate pairs before spatial transformation
+
+**Status:** Accepted
+
+Coordinate keys use namespaced SHA-256 over canonical BNG easting/northing rounded to
+three decimal places, source CRS `EPSG:27700`, target CRS `EPSG:4326` and transform
+contract `bng_wgs84_v1`. Payload v3 also binds the expected DuckDB and spatial-extension
+versions so a runtime upgrade cannot silently reuse old transform keys. Direct UPRN,
+unit-postcode centroid and sector-centroid requests share this value-object key. The
+narrow WGS84 cache transforms each distinct valid pair once with `always_xy := true` and
+records the effective DuckDB and spatial-extension versions.
+The merge-incremental request registry retains previously requested coordinate value
+objects across release changes. Closure therefore requires every current source request
+to reach the registry and every transformed row to reach a retained registry pair;
+historical registry rows need not remain present in the current source release.
+
+### IMP-031: Keep approximate plotting coordinates distinct from official geography
+
+**Status:** Accepted
+
+Unit-postcode centroids average distinct ONSUD BNG points so repeated UPRNs at one point
+do not overweight the result. Sector centroids equally weight unit-postcode centroids and
+retain the inward sector digit. Both models expose contributing counts and a conservative
+bounding-box-diagonal spread diagnostic. Neither approximate model carries LSOA, MSOA,
+LAD, region, country or other official geography fields.
+
 ## 6. Validation evidence
 
 The latest completed pre-Phase-2 validation on 15 July 2026 produced:
@@ -440,6 +467,9 @@ The completed Phase 2 identity checkpoint later on 15 July 2026 produced:
 - 25 of 25 atomic core fact tests passing.
 - 14 of 14 targeted recommendation aggregate tests passing.
 - 59 of 59 bounded complete core tests passing after recommendation aggregation.
+- 49 of 49 targeted location and coordinate-cache tests passing.
+- WGS84 incremental no-op idempotency confirmed by unchanged row count, timestamp and
+  order-independent coordinate-key checksum.
 
 ## 7. Active Phase 2 plan
 
@@ -747,6 +777,61 @@ The following sequence is active. This section will be updated as work progresse
 - Complete bounded core tests: 59 of 59 passing.
 - Python tests: 11 of 11 passing; dbt parse, Ruff, SQLFluff and diff checks pass.
 - Database size is approximately 138 GB with approximately 149 GB free.
+
+### 2026-07-15 19:37 UTC: Release-aware coordinate cache
+
+- Profiled the selected `DEC_2025` ONSUD release before materialisation:
+  - 40,676,358 valid postcode-coordinate allocation tuples.
+  - 1,724,389 valid unit postcodes.
+  - 10,750 true postcode sectors.
+- Added a checkpointed distinct postcode-point model to keep national aggregation within
+  bounded memory. It contracted the valid allocation tuples to 32,347,014 distinct
+  postcode/BNG points in 1 minute 28 seconds.
+- Unit-postcode centroid materialisation completed in 15 seconds. Sector-centroid
+  materialisation completed in under one second.
+- Two 12 GB attempts were killed by the 17 GB host while rebuilding the 17.9 million-row
+  direct-UPRN outcome; no replacement table committed. Lowering the DuckDB ceiling to
+  8 GB forced earlier spill and completed the rebuild in 2 minutes 34 seconds. The
+  project profile now defaults to one dbt thread, one DuckDB thread and an 8 GB ceiling.
+- Canonical coordinate-pair contraction completed in 20 seconds and WGS84 transformation
+  completed in 27 seconds with one DuckDB thread.
+- National location cache counts:
+
+| Model or measure | Rows/count |
+|---|---:|
+| `int_postcode_coordinate_point` | 32,347,014 |
+| `int_postcode_coordinate` | 1,724,389 |
+| `int_postcode_sector_coordinate` | 10,750 |
+| Source coordinate requests | 19,656,338 |
+| Distinct required coordinate pairs | 16,264,097 |
+| Cached WGS84 transforms | 16,264,097 |
+| Pairs reused by multiple coordinate methods | 40,575 |
+
+- Source requests comprise 17,921,199 resolved direct-UPRN coordinates, 1,724,389 unit
+  postcode centroids and 10,750 sector centroids. Coordinate contraction preserves all
+  source keys while avoiding repeat transforms.
+- `reference_count` now counts coherent upstream coordinate requests. Separate columns
+  retain 23,259,663 EPC direct-UPRN references, 40,676,358 ONSUD postcode allocation
+  tuples and 1,724,389 sector input postcodes without summing incompatible units.
+- All 16,264,097 required pairs pass BNG validation and all cached results pass expected
+  UK bounds. Observed WGS84 extent is longitude -7.812141 to 1.760978 and latitude
+  49.890848 to 60.807518.
+- Transform metadata records DuckDB `v1.5.4`, spatial extension `28db190`, source CRS
+  `EPSG:27700`, target CRS `EPSG:4326` and transform contract `bng_wgs84_v1`.
+- The London benchmark `(530000, 180000)` transforms to longitude -0.1283539405 and
+  latitude 51.5039908276 within a tolerance of 0.000001 degrees, confirming axis order.
+- Independent review added runtime-bound key payload v3, merge-incremental pair history,
+  model-backed transform fixtures, centroid algorithm fixtures and null-safe key gates.
+  The one-time v3 full refresh completed in 3 minutes 51 seconds.
+- Targeted location tests: 49 of 49 passing.
+- The first incremental no-op check exposed an alias used only in the incremental branch;
+  the initial full refresh was unaffected. After correction, the no-op run completed with
+  unchanged 16,264,097 rows, transform timestamp and key checksum
+  `13153705635075266491`.
+- A subsequent combined incremental run merged the request registry in 37 seconds and
+  checked the transform cache in 10 seconds. Pair/cache row counts and checksums remained
+  unchanged.
+- Database size is approximately 144 GB with approximately 142 GB free.
 
 ## 9. Open decisions and governance dependencies
 
