@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: identity_target_hypothesis
+    description: One non-registry evidence-group hypothesis per eligible observation.
+    columns:
+      - name: identity_run_observation_key
+        data_tests: [not_null, unique]
+      - name: target_hypothesis_key
+        data_tests: [not_null]
+      - name: target_hypothesis_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [EVIDENCE_GROUP_ONLY]
+
+  - name: identity_target_alternative_l
+    description: Target-group alternatives for canonical left candidate endpoints.
+    columns:
+      - name: identity_run_observation_key
+        data_tests: [not_null]
+      - name: target_hypothesis_key
+        data_tests: [not_null]
+
+  - name: identity_target_alternative_r
+    description: Target-group alternatives for canonical right candidate endpoints.
+    columns:
+      - name: identity_run_observation_key
+        data_tests: [not_null]
+      - name: target_hypothesis_key
+        data_tests: [not_null]
+
+  - name: identity_target_alternative
+    description: One grouped counterpart-target alternative per observation and run.
+    columns:
+      - name: target_alternative_key
+        data_tests: [not_null, unique]
+      - name: identity_run_observation_key
+        data_tests: [not_null]
+      - name: supporting_candidate_count
+        data_tests: [not_null]
+
+  - name: identity_target_alternative_ranked
+    description: Target-group ranks and margins retained as uncalibrated evidence.
+    columns:
+      - name: target_alternative_key
+        data_tests: [not_null, unique]
+      - name: target_alternative_rank
+        data_tests: [not_null]
+      - name: competition_scope
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [TARGET_HYPOTHESIS_UNCALIBRATED]

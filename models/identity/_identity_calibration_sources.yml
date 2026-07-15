@@ -1,0 +1,66 @@
+version: 2
+
+sources:
+  - name: identity_calibration
+    description: Persistent calibration samples, manual labels and threshold evaluations.
+    schema: identity
+    tables:
+      - name: identity_calibration_sample_manifest
+        columns:
+          - name: calibration_sample_id
+            data_tests: [not_null, unique]
+          - name: calibration_sample_key
+            data_tests: [not_null, unique]
+          - name: sample_status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [RUNNING, SUCCEEDED, FAILED]
+
+      - name: identity_calibration_sample
+        columns:
+          - name: calibration_sample_row_key
+            data_tests: [not_null, unique]
+          - name: calibration_sample_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('identity_calibration', 'identity_calibration_sample_manifest')
+                    field: calibration_sample_id
+          - name: candidate_pair_key
+            data_tests: [not_null, unique]
+          - name: sample_stratum
+            data_tests: [not_null]
+
+      - name: identity_adjudication_label
+        columns:
+          - name: adjudication_label_id
+            data_tests: [not_null, unique]
+          - name: calibration_sample_row_key
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('identity_calibration', 'identity_calibration_sample')
+                    field: calibration_sample_row_key
+          - name: adjudication_label
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [MATCH, NO_MATCH, UNSURE]
+          - name: label_status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [ACTIVE, SUPERSEDED]
+
+      - name: identity_calibration_evaluation
+        columns:
+          - name: calibration_evaluation_id
+            data_tests: [not_null]
+          - name: evaluation_status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [EVALUATION_ONLY, APPROVED, REJECTED]

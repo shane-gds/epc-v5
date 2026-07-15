@@ -42,6 +42,7 @@ Statuses used below:
 | Identity candidates | Complete for current benchmark policy | 26,301,482 pairs |
 | Identity scoring | Complete, explicitly uncalibrated | 26,301,482 Splink scores |
 | Identity outcomes | Review decisions and singleton/unresolved closure complete | 54,869,297 hypotheses |
+| Calibration | Deterministic sample ready; explicit labels pending | 1,104 blank-label rows |
 | Core registries and facts | Not started | Planned after Phase 2 gates |
 | Current-state and MEES marts | Not started | Planned Phase 5 |
 | Graph export | Not started | Planned Phase 6 |
@@ -348,6 +349,42 @@ succeeded in 69 seconds without increasing memory. High-cardinality identity agg
 commands therefore use `EPC_V4_DUCKDB_THREADS=1`; profile memory and thread limits are
 environment-overridable and recorded with execution evidence.
 
+### IMP-024: Do not infer calibration labels from matching features
+
+**Status:** Accepted
+
+Same-UPRN, exact-address and high-score pairs may be useful sampling strata, but they are
+not independent ground truth. Production threshold calibration requires explicit labels
+with adjudicator, target scope, rationale and timestamp. Proxy features will not be
+written into the adjudication table as labels.
+
+### IMP-025: Compare candidate target hypotheses before observation margins
+
+**Status:** Accepted design; implementation active
+
+Repeated EPC assessments and transactions can corroborate one target rather than compete
+as separate alternatives. Calibration therefore groups counterpart observations into
+run-versioned target hypotheses before calculating ranks and margins. These hypotheses
+are evidence groupings only and are not registry entities.
+
+### IMP-026: Use deterministic stratified calibration samples
+
+**Status:** Accepted
+
+Calibration samples are keyed by identity run, model hash, sampling-contract version,
+quota and deterministic hash prefix. Sampling stratifies by rule, score band, agreement
+pattern, endpoint fan-out, target ambiguity and review priority. Export files contain
+blank label fields and are stored only under ignored local output paths; manifests retain
+row counts, parameters and SHA-256.
+
+### IMP-027: Block evaluation until explicit labels cover both classes
+
+**Status:** Accepted
+
+Threshold evaluation refuses to run until the configured minimum number of active
+manual `MATCH`/`NO_MATCH` labels exists and both classes are present. Evaluation output
+is evidence-only and cannot update decision policy or registry promotion automatically.
+
 ## 6. Validation evidence
 
 The latest completed pre-Phase-2 validation on 15 July 2026 produced:
@@ -373,6 +410,9 @@ The completed Phase 2 identity checkpoint later on 15 July 2026 produced:
 - Eligible identity observations and hypotheses reconciled by count and an
   order-independent endpoint checksum at 54,869,297.
 - Zero accepted edges and zero promoted registry records under the uncalibrated policy.
+- 136 of 136 identity, target-group, calibration-source and singular tests passing after
+  calibration framework materialisation.
+- 11 of 11 Python tests passing.
 
 ## 7. Active Phase 2 plan
 
@@ -556,6 +596,61 @@ The following sequence is active. This section will be updated as work progresse
   pass in 9 seconds.
 - The full 206 dbt tests passed in bounded identity (96) and complementary (110) suites.
 - Database size is approximately 94 GB with approximately 192 GB free.
+
+### 2026-07-15 13:40 UTC: Calibration framework initiated
+
+- User requested continuation into the next identity steps.
+- Scope is limited to calibration prerequisites, target-hypothesis competition,
+  deterministic review sampling, adjudication persistence and evaluation tooling.
+- No benchmark feature or score will be treated as a label.
+- Accept/reject thresholds, multi-observation components and registry UUID allocation
+  remain blocked until labelled calibration gates pass.
+
+### 2026-07-15 13:44 UTC: Target-hypothesis competition
+
+- Materialised one evidence-group target hypothesis per eligible observation.
+- Target-hypothesis population:
+  - 31,600,653 address-signature observations across 20,042,456 target keys.
+  - 23,268,644 supplied-UPRN observations across 17,929,363 target keys.
+- Initial left/right target aggregation exceeded 12 GB because distinct counting and
+  struct-valued tie-breaking retained excessive aggregate state; neither table committed.
+- Candidate uniqueness makes counterpart count equal to pair count within an
+  observation/target group. Replacing distinct state and using score-only `arg_max`
+  preserved grouped evidence while remaining non-promotional.
+- Successful memory-bounded runtimes:
+  - Left target alternatives: 2 minutes 47 seconds.
+  - Right target alternatives: 3 minutes 9 seconds.
+  - Combined target alternatives: 2 minutes 5 seconds.
+  - Ranked target alternatives: 2 minutes 27 seconds.
+- 52,602,964 candidate endpoints contract to 33,900,058 target alternatives across
+  29,924,250 observations.
+- Maximum target hypotheses for one observation is eight; 29,924,250 observations have a
+  first-ranked target and 3,974,724 have a second-ranked target.
+
+### 2026-07-15 14:17 UTC: Deterministic adjudication sample
+
+- Added persistent calibration sample manifest, sample row, adjudication label and
+  evaluation tables plus import/evaluation tooling.
+- The first sample attempt failed before row insertion because blocking-rule provenance
+  was read from the decision rather than score relation. The manifest recorded `FAILED`.
+- Fixed the binding and made failed deterministic sample keys retryable without duplicate
+  manifests.
+- Successful sample ID: `9c7f2165-c393-2f43-0f88-c2f5d9da12ea`.
+- Sample rows: 1,104 across 67 strata.
+- Rule coverage:
+  - `D01_EXACT_UPRN`: 689 rows across 38 strata.
+  - `P01_POSTCODE_PREMISE_EXACT`: 283 rows across 18 strata.
+  - `P02_SECTOR_PREMISE_EXACT`: 132 rows across 11 strata.
+- Review-priority coverage: 552 high, 132 medium and 420 standard.
+- Export SHA-256:
+  `bc2a5c72db80b17c49c7594dd558059abc83680d1414ef6a49cfd0e89e848c6b`.
+- Repeating the same command returned the same sample manifest and row count without
+  duplication.
+- Active adjudication labels: zero. No calibration metric or threshold has been inferred.
+- Dedicated target/calibration dbt tests: 40 of 40 passing.
+- Complete identity/calibration/singular dbt suite: 136 of 136 passing.
+- Python tests: 11 of 11 passing; dbt parse, Ruff and SQLFluff model lint pass.
+- Database size is approximately 118 GB with approximately 168 GB free.
 
 ## 9. Open decisions and governance dependencies
 
