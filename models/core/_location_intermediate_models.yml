@@ -2,7 +2,16 @@ version: 2
 
 models:
   - name: int_required_uprn
-    description: One distinct EPC-required UPRN under an explicit ONSUD release.
+    description: |
+      Lists the distinct valid UPRNs observed on EPC records that need an ONSUD lookup.
+      There is one row per UPRN under the explicitly configured ONSUD release.
+
+      Use this model as the lookup frontier between EPC evidence and the national ONSUD
+      allocation table. Reference counts and EPC inspection dates help explain why each
+      UPRN is required.
+
+      Inclusion only means a lookup is needed. It does not confirm the UPRN, resolve a
+      location, or identify a property entity.
     columns:
       - name: required_uprn_key
         data_tests: [not_null, unique]
@@ -15,7 +24,16 @@ models:
                 values: [DEC_2025]
 
   - name: int_uprn_location
-    description: One cautious ONSUD location-resolution outcome per required UPRN.
+    description: |
+      Records the direct ONSUD lookup outcome for every required UPRN. There is one row per
+      required UPRN, with a clear outcome: uniquely resolved, missing, or conflicting.
+
+      Use this model when you need release-specific direct-UPRN coordinates or official
+      geography codes supplied by ONSUD. Coordinates are exposed only for a unique
+      allocation with valid British National Grid values.
+
+      This model does not try postcode fallbacks or transform coordinates to WGS84. A
+      unique allocation is strong location evidence, but not proof of dwelling identity.
     columns:
       - name: uprn_location_key
         data_tests: [not_null, unique]
@@ -34,7 +52,15 @@ models:
                 values: [RESOLVED_UNIQUE, MISSING_IN_RELEASE, CONFLICTING_ALLOCATIONS]
 
   - name: int_postcode_coordinate_point
-    description: One distinct valid ONSUD BNG point per release and unit postcode.
+    description: |
+      Deduplicates valid ONSUD coordinate evidence before postcode centroids are calculated.
+      There is one row per release, unit postcode, easting, and northing combination.
+
+      Use this checkpoint to see the distinct British National Grid points contributing to
+      a postcode and how many source allocations produced each point. Deduplication stops
+      repeated UPRNs at one location from overweighting the centroid.
+
+      A row is not a postcode centroid, premise location, or official geography assignment.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -50,7 +76,17 @@ models:
         data_tests: [not_null]
 
   - name: int_postcode_coordinate
-    description: One approximate unit-postcode centroid per explicit ONSUD release.
+    description: |
+      Provides one approximate British National Grid centroid for each unit postcode in
+      the configured ONSUD release. There is one row per release and unit postcode, and
+      distinct coordinate points are weighted equally.
+
+      Use this model as an honestly labelled plotting fallback when a defensible direct
+      UPRN coordinate is unavailable. Point counts, conflict counts, and spread help users
+      judge how broad the approximation is.
+
+      This is not a building, delivery point, surveyed location, or official postcode
+      centroid, and it deliberately carries no exact geography assignment.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -74,7 +110,15 @@ models:
                 values: [BOUNDING_BOX_DIAGONAL]
 
   - name: int_postcode_sector_coordinate
-    description: One equally weighted unit-postcode centroid per true postcode sector and release.
+    description: |
+      Provides one broad centroid for each true postcode sector in the configured ONSUD
+      release. There is one row per release and sector, with every unit-postcode centroid
+      receiving equal weight.
+
+      Use this only for coarse plotting when direct UPRN and unit-postcode evidence are not
+      usable. The number and spread of contributing postcodes show how broad the fallback is.
+
+      A sector centroid is not a premise location, postcode district, or official geography.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -98,7 +142,17 @@ models:
                 values: [UNIT_POSTCODE_EQUAL_WEIGHT]
 
   - name: int_required_coordinate_pair
-    description: One canonical BNG pair and transform contract requested by approved location methods.
+    description: |
+      Acts as the shared registry and transformation queue for canonical British National
+      Grid coordinate pairs. There is one row per coordinate pair, CRS combination,
+      transform contract, and pinned spatial runtime.
+
+      Use this model to transform a coordinate once and reuse it across direct UPRN,
+      postcode-centroid, and sector-centroid requests. It records which methods requested
+      the pair and keeps their differently grained counts separate.
+
+      The pair has no entity, postcode, precision, or geography meaning on its own. Older
+      requested value objects may remain in this incremental registry for reproducibility.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -119,7 +173,17 @@ models:
                 values: [VALID, OUT_OF_BOUNDS]
 
   - name: int_coordinate_wgs84
-    description: One cached WGS84 transform per valid canonical BNG coordinate pair.
+    description: |
+      Caches the WGS84 result for each valid required coordinate pair. There is one row per
+      `coordinate_key`; unseen pairs are transformed once from EPSG:27700 to EPSG:4326 and
+      retained for reuse.
+
+      Join on `coordinate_key` when longitude, latitude, or WGS84 geometry is needed.
+      Runtime versions, axis order, transform contract, and timestamp make the result
+      reproducible.
+
+      A coordinate transformation changes the CRS, not the precision of the source. Do not
+      treat a postcode or sector fallback as if it were a precise direct-UPRN location.
     columns:
       - name: coordinate_key
         data_tests:

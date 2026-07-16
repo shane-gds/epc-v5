@@ -22,7 +22,16 @@ seeds:
 
 models:
   - name: identity_scoring_input
-    description: Current eligible identity population projected to versioned Splink features.
+    description: |
+      Projects the current run's eligible observations into the compact feature set expected
+      by Splink. There is one row per eligible identity observation, with `unique_id` set to
+      its run-specific observation key.
+
+      Use this as the input boundary for externally orchestrated candidate scoring. It keeps
+      scoring features separate from the wider source observation model.
+
+      Property classes and normalised text are comparison features, not corrected facts.
+      This view contains no ineligible rows, historical runs, scores, or decisions.
     columns:
       - name: unique_id
         data_tests: [not_null, unique]
@@ -32,7 +41,16 @@ models:
         data_tests: [not_null]
 
   - name: identity_candidate_rule_hit
-    description: One admitting blocking-rule hit per immutable identity candidate pair and run.
+    description: |
+      Records why a blocking rule admitted two observations for comparison. There is one
+      row per admitting rule, canonical candidate pair, and identity run.
+
+      Use this model to audit candidate provenance and understand the volume produced by
+      each blocking rule. Under the current policy, rules are mutually exclusive and each
+      candidate pair has one rule hit.
+
+      Admission only means "score this pair". It is not an accepted match, and a shared
+      supplied UPRN is still evidence rather than proof of dwelling identity.
     columns:
       - name: candidate_rule_hit_key
         data_tests: [not_null, unique]
@@ -44,7 +62,15 @@ models:
         data_tests: [not_null]
 
   - name: identity_candidate_pair
-    description: One canonical unordered candidate pair per immutable identity run.
+    description: |
+      Provides the canonical observation pairs sent for scoring. There is one unordered
+      pair per identity run, with the lower run-observation key stored on the left.
+
+      Use this as the candidate spine when joining blocking evidence, Splink scores,
+      decisions, and reconciliation checks.
+
+      Left and right are only lexical positions. A candidate is a plausible comparison,
+      not a match, entity, or property relationship.
     columns:
       - name: candidate_pair_key
         data_tests: [not_null, unique]
@@ -59,7 +85,15 @@ models:
                 values: [GENERATED]
 
   - name: identity_candidate_generation_audit
-    description: Rule-level counts and operational checksums for the current identity run.
+    description: |
+      Summarises candidate-generation volume and operational checksums for the current
+      identity run. There is one row per blocking rule that produced at least one hit.
+
+      Use this model to reconcile candidate counts, spot blocking-policy drift, and compare
+      repeat runs without scanning every pair.
+
+      This is a rebuildable current-run audit table rather than historical evidence. Its
+      checksums are operational controls, not stable business identifiers.
     columns:
       - name: rule_code
         data_tests: [not_null, unique]

@@ -2,19 +2,44 @@ version: 2
 
 models:
   - name: identity_observation_candidate_summary_l
-    description: Current candidate endpoint summary for canonical left endpoints.
+    description: |
+      Summarises scored candidates for observations that appear on the canonical left side
+      of a current-run pair. There is one row per left-side observation with at least one
+      candidate, including counts and the highest observed match weight.
+
+      Use this as a memory-bounded helper for the combined endpoint summary. Left is only a
+      lexical position, so this model is incomplete on its own and has no business meaning.
+
+      The top score is uncalibrated evidence, not an accepted counterpart or confidence.
     columns:
       - name: identity_run_observation_key
         data_tests: [not_null, unique]
 
   - name: identity_observation_candidate_summary_r
-    description: Current candidate endpoint summary for canonical right endpoints.
+    description: |
+      Summarises scored candidates for observations that appear on the canonical right side
+      of a current-run pair. There is one row per right-side observation with at least one
+      candidate, including counts and the highest observed match weight.
+
+      Use this with the left-side helper to build a complete observation view. Right is
+      only a lexical position, and observations with no candidates are absent.
+
+      The retained score is uncalibrated evidence and must not be treated as a match.
     columns:
       - name: identity_run_observation_key
         data_tests: [not_null, unique]
 
   - name: identity_match_decision
-    description: One explicit uncalibrated review decision per current candidate score.
+    description: |
+      Applies the current decision policy to each score from the latest successful national
+      Splink run. There is one row per persisted candidate score and policy version.
+
+      Use this model for review prioritisation and as the governed boundary between raw
+      scores and later hypotheses. It keeps links to the candidate, identity run, Splink
+      run, and model artifact that produced the evidence.
+
+      The current policy is deliberately uncalibrated: every outcome is `REVIEW`, no edge
+      is accepted, and probabilities are not calibrated confidence or proof of identity.
     columns:
       - name: match_decision_key
         data_tests: [not_null, unique]
@@ -31,8 +56,29 @@ models:
               arguments:
                 values: [false]
 
+  - name: identity_candidate_alternative
+    description: |
+      Turns every scored candidate pair into an alternative from each endpoint's point of
+      view. There is one row per focal observation and candidate pair, so each pair appears
+      twice with an endpoint-level rank and margin to the next candidate.
+
+      Use this model to inspect candidate fan-out, compare raw alternatives, or prepare
+      review samples. For grouped target competition, use the target-alternative models.
+
+      Ranks and margins are uncalibrated diagnostics. Repeated observations can describe
+      the same target, so this model must not drive acceptance or registry promotion.
+
   - name: identity_observation_candidate_summary
-    description: One candidate-count and deterministic top-score summary per candidate endpoint.
+    description: |
+      Combines the left and right helper tables into one candidate profile per current-run
+      observation that has at least one scored candidate. There is one row per qualifying
+      run observation.
+
+      Use this model to see total candidate and review counts and the deterministic top
+      candidate before creating explicit hypotheses. Observations with no candidates are
+      intentionally absent and are handled as singletons downstream.
+
+      The top candidate remains uncalibrated comparison evidence, not an accepted link.
     columns:
       - name: identity_run_observation_key
         data_tests: [not_null, unique]
@@ -40,7 +86,16 @@ models:
         data_tests: [not_null]
 
   - name: identity_hypothesis
-    description: One explicit singleton or unresolved-review hypothesis per eligible observation.
+    description: |
+      Gives every eligible observation an explicit current-run outcome. Records with no
+      candidate become `SINGLETON_NO_CANDIDATE`; records with candidate evidence become
+      `UNRESOLVED_REVIEW`.
+
+      There is one row per eligible run observation. Use this model for full-population
+      closure and as the input to the authoritative assignment ledger.
+
+      The current policy accepts no edges, so every observation keeps its own run-specific
+      hypothesis. These keys are not persistent premises, buildings, or dwellings.
     columns:
       - name: identity_hypothesis_key
         data_tests: [not_null, unique]
@@ -53,7 +108,15 @@ models:
                 values: [SINGLETON_NO_CANDIDATE, UNRESOLVED_REVIEW]
 
   - name: identity_cluster_membership
-    description: Current run singleton membership; no review-only edge creates a component.
+    description: |
+      Exposes current hypotheses through a cluster-membership-shaped interface. There is one
+      row per current-run observation and one run-specific cluster.
+
+      Use this when downstream work needs explicit membership rows or must reconcile
+      singleton and unresolved-review outcomes.
+
+      All current clusters contain one observation because review-only candidate pairs do
+      not create components. Cluster keys are not durable property identifiers.
     columns:
       - name: identity_run_observation_key
         data_tests: [not_null, unique]
@@ -61,7 +124,19 @@ models:
         data_tests: [not_null, unique]
 
   - name: bridge_source_record_entity_assignment
-    description: One explicit run-versioned resolution outcome for every eligible source record.
+    description: |
+      This is the best place to start when you want to know what happened to an eligible
+      PPD or EPC record during identity matching. There is one assignment version for each
+      source record's outcome in an identity run.
+
+      The model follows an SCD Type 2 pattern. When a new governed run is published, earlier
+      current rows are updated to set `valid_to` and `is_current = false`, and new rows begin
+      at the new run's registration time. Use `is_current` for the latest view or the
+      validity dates for an as-of view.
+
+      Identity is not calibrated yet, so every current row is `UNRESOLVED`. Blank registry
+      IDs and confidence values are expected. A hypothesis is a working suggestion, not a
+      confirmed dwelling or building, and destructive full refresh is blocked.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:

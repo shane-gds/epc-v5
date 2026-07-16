@@ -2,7 +2,16 @@ version: 2
 
 models:
   - name: stg_pp_transaction_observation
-    description: One accepted, typed PPD source-row observation; no premises identity assertion.
+    description: |
+      Turns accepted HM Land Registry Price Paid Data rows into clean, typed transaction
+      observations while keeping the lineage needed to trace every value back to Bronze.
+
+      There is one row per accepted source record and transaction ID. Use this model as
+      the prepared evidence for identity matching, sale facts, and transaction analysis
+      instead of parsing the raw files again.
+
+      Missing or invalid postcodes stay visible through status fields. The address fields
+      help matching, but they do not identify a confirmed premises, owner, tenant, or use.
     columns:
       - name: source_record_key
         data_tests: [not_null, unique]
@@ -24,7 +33,17 @@ models:
                 values: [VALID]
 
   - name: stg_epc_certificate_observation
-    description: One accepted, typed EPC source-row observation retaining assessment evidence.
+    description: |
+      Turns accepted domestic EPC source rows into typed certificate observations. Dates,
+      ratings, scores, addresses, UPRNs, and building descriptions are prepared once while
+      retaining complete source lineage.
+
+      There is one row per accepted source observation, not necessarily one unique
+      certificate number. Repeated certificates are labelled as unique, exact duplicates,
+      or conflicts so downstream models do not silently choose between different evidence.
+
+      A supplied UPRN is an observation, not confirmed dwelling identity. The publisher's
+      "current" rating describes assessment time and does not mean current today.
     columns:
       - name: source_record_key
         data_tests: [not_null, unique]
@@ -51,7 +70,17 @@ models:
                 values: [VALID, INSPECTION_AFTER_LODGEMENT]
 
   - name: stg_epc_recommendation_observation
-    description: One accepted EPC recommendation source-row with cautious cost interpretation.
+    description: |
+      Prepares EPC recommendation rows for item-level facts, future measure mapping, and
+      certificate summaries. It keeps the original wording and cautiously extracts only
+      supported GBP cost ranges or single values.
+
+      There is one row per accepted recommendation item. Recommendations remain visible
+      when their certificate parent is missing or conflicted, with the outcome recorded in
+      `parent_status`.
+
+      Parsed costs are only what could be read from the supplied text. They are not quotes,
+      actual spend, proof of installation, suitability advice, or exemption evidence.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -84,7 +113,17 @@ models:
                   - NUMERIC_OVERFLOW
 
   - name: stg_onsud_uprn_allocation
-    description: One distinct typed ONSUD allocation tuple per release and UPRN.
+    description: |
+      Creates a narrow, typed, release-aware view of ONSUD UPRN allocations, including
+      postcodes, British National Grid coordinates, and selected geography codes.
+
+      There is one distinct allocation tuple per release and UPRN. Exact source duplicates
+      are combined and counted, while genuinely different allocations remain as separate
+      rows marked `CONFLICT`. Use the source-record bridge when every contributing raw row
+      is needed.
+
+      An allocation is valid only for its stated release. It is not automatically the
+      latest location or proof that an EPC's observed UPRN identifies a dwelling.
     columns:
       - name: onsud_allocation_key
         data_tests: [not_null, unique]
@@ -109,7 +148,17 @@ models:
                 values: [VALID, MISSING, PARTIAL, OUT_OF_BOUNDS]
 
   - name: stg_lad_name_code_reference
-    description: One typed LAD names-and-codes source observation with release and row lineage.
+    description: |
+      Prepares the published Local Authority District names-and-codes file as release-aware
+      reference evidence. Official codes, English names, supplied Welsh names, and source
+      lineage are retained.
+
+      There is one row per source observation in a registered LAD release. Use the
+      downstream reference profile to see whether a code is unique, duplicated, or
+      conflicting before it is published to the geography dimension.
+
+      Invalid values remain visible with parse statuses. The source object ID is not a
+      durable geography key, and this file does not provide hierarchy or validity dates.
     columns:
       - name: geography_reference_observation_key
         data_tests: [not_null, unique]
@@ -127,7 +176,17 @@ models:
                 values: [VALID, MISSING, INVALID]
 
   - name: stg_lpa_name_code_reference
-    description: One typed LPA names-and-codes source observation with release and row lineage.
+    description: |
+      Prepares the published Local Planning Authority names-and-codes file as release-aware
+      reference evidence. It standardises codes and names, interprets valid co-terminous
+      flags, and keeps complete source lineage.
+
+      There is one row per source observation in a registered LPA release. Valid rows feed
+      the downstream reference profile, where duplicates and conflicts are handled before
+      dimension publication.
+
+      Missing or invalid values are reported rather than repaired. This model does not
+      infer hierarchy, country, validity dates, or which release should be current.
     columns:
       - name: geography_reference_observation_key
         data_tests: [not_null, unique]

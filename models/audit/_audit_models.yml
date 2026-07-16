@@ -2,7 +2,17 @@ version: 2
 
 models:
   - name: quarantine_source_record
-    description: One fatal Silver validation rule failure per immutable source row.
+    description: |
+      Keeps source rows that could not be safely turned into typed Silver data. Each row
+      records one fatal validation failure, the rule that failed, and the lineage needed
+      to find the original file and source row.
+
+      Use this model to investigate rejected evidence, reconcile source counts, or manage
+      a controlled replay. One source record can fail more than one rule, so count distinct
+      `source_record_key` values when you need the number of affected source rows.
+
+      Quarantine is not corrected data. Non-fatal uncertainty stays in Silver with a clear
+      status instead of being sent here.
     columns:
       - name: quarantine_event_key
         data_tests: [not_null, unique]
@@ -19,7 +29,16 @@ models:
                 values: [NOT_REPLAYED, REPLAY_SUCCEEDED, REPLAY_FAILED]
 
   - name: audit_source_file_silver_reconciliation
-    description: One leaf source-file reconciliation from Bronze through Silver/quarantine.
+    description: |
+      Shows whether every loaded leaf source file is fully accounted for from its audit
+      manifest, through Bronze, and into either Silver or quarantine.
+
+      There is one row per leaf `source_file_id`. Use `reconciliation_status` as a
+      publication gate: anything other than `PASSED` means rows are missing, duplicated,
+      or attached to inconsistent release metadata and should be investigated.
+
+      This is a completeness check, not a guarantee that the source values are correct.
+      Archive containers are represented by their member CSV files.
     columns:
       - name: source_file_id
         data_tests: [not_null, unique]
@@ -30,7 +49,16 @@ models:
                 values: [PASSED]
 
   - name: audit_silver_quality_profile
-    description: One compact national Silver quality metric per dataset and metric name.
+    description: |
+      Provides a quick health summary of the current Silver data, including accepted row
+      counts and useful exception counts such as invalid postcodes, missing UPRNs,
+      conflicting natural keys, orphan recommendations, and quarantine reasons.
+
+      There is one row per `source_dataset` and `metric_name`. Use this model for a fast
+      operational check before drilling into the detailed Silver or quarantine records.
+
+      The table is rebuilt from the current data and is not a historical snapshot. Metrics
+      also use different source grains, so compare like with like when building dashboards.
     columns:
       - name: quality_metric_key
         data_tests: [not_null, unique]

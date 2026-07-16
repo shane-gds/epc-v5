@@ -2,7 +2,16 @@ version: 2
 
 models:
   - name: fct_sale_transaction
-    description: One immutable typed PPD transaction/status fact without subject identity.
+    description: |
+      Stores typed Price Paid Data transactions independently of property identity. There
+      is one row per transaction ID and supplied publisher record status.
+
+      Use this model for sale dates, recorded prices, source addresses, and PPD categories.
+      Join through a separate subject assertion when you need a dwelling or premises so
+      later identity improvements do not rewrite the original transaction evidence.
+
+      A row is evidence of what the publisher supplied. It is not ownership history, a
+      valuation, proof of occupancy, or a reliable source of exact geography.
     columns:
       - name: sale_transaction_key
         data_tests: [not_null, unique]
@@ -27,7 +36,18 @@ models:
                 field: source_record_key
 
   - name: fct_epc_certificate
-    description: One canonical certificate observation per publisher release and natural key.
+    description: |
+      Stores the canonical typed observation of an EPC certificate within a publisher
+      release. There is one row per release key and certificate number. Any repeated natural
+      key, including a conflict, uses a deterministic representative while its classification
+      and source-row count stay visible. Alternative source variants remain in Silver.
+
+      Use this model for assessment dates, ratings, scores, construction descriptions,
+      assessment-time tenure, and as the parent of recommendation facts.
+
+      "Current" fields describe assessment time, not today. The observed UPRN is evidence,
+      not confirmed dwelling identity, and this model does not decide certificate
+      currentness or legal validity.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -51,7 +71,16 @@ models:
                 field: source_record_key
 
   - name: fct_epc_recommendation_observation
-    description: One immutable recommendation item observation with parent-or-orphan outcome.
+    description: |
+      Preserves one typed EPC recommendation source observation, including its original
+      wording, improvement code, parent outcome, and cautiously parsed cost bounds.
+
+      There is one row per staged recommendation source record. The certificate key can be
+      null so orphan recommendations remain visible instead of being dropped. Use this as
+      the authoritative item-level evidence beneath summaries and future measure mapping.
+
+      Parsed costs are not quotations or actual expenditure. A recommendation does not
+      prove suitability, installation, savings, exemption, or dwelling identity.
     columns:
       - name: epc_recommendation_key
         data_tests: [not_null, unique]
@@ -76,7 +105,16 @@ models:
                 values: [OBSERVED]
 
   - name: int_epc_recommendation_observed_agg
-    description: Memory-bounded recommendation summary for certificates with parented items.
+    description: |
+      Provides a memory-bounded roll-up of recommendation items that have a resolved EPC
+      certificate parent. There is one row per certificate with at least one parented item;
+      zero-item certificates and orphan recommendations do not appear.
+
+      Use this support model for cost-parse counts, text-observation counts, source load
+      bounds, and the first aggregation checkpoint before all certificates are added.
+
+      This is an internal aggregate rather than the complete consumer summary. Null cost
+      totals mean no parseable costs were available, and no measure mapping happens here.
     columns:
       - name: epc_certificate_key
         data_tests:
@@ -90,7 +128,17 @@ models:
         data_tests: [not_null]
 
   - name: int_epc_recommendation_agg
-    description: One recommendation evidence summary per EPC certificate, including zero-item certificates.
+    description: |
+      Provides a convenient recommendation summary for every canonical EPC certificate,
+      including certificates with no parented recommendation items. There is exactly one
+      row per `epc_certificate_key`.
+
+      Use this model for certificate-level item counts, cost-parse coverage, and indicative
+      cost totals without rescanning the full recommendation fact. Zero-item certificates
+      receive a clear `NO_RECOMMENDATIONS` status, while unknown cost totals stay null.
+
+      Measure mapping is currently `NOT_RUN`. The totals are not quotes, installed-work
+      records, exemptions, dwelling attributes, or replacements for item-level evidence.
     columns:
       - name: epc_certificate_key
         data_tests:

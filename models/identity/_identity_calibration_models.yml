@@ -2,7 +2,16 @@ version: 2
 
 models:
   - name: identity_target_hypothesis
-    description: One non-registry evidence-group hypothesis per eligible observation.
+    description: |
+      Places every eligible current-run observation into a provisional evidence group for
+      calibration analysis. EPC records with a supplied UPRN use a UPRN-based key; other
+      records use a postcode and normalised premise-address signature.
+
+      There is one row per eligible observation. Use these groups to avoid treating repeated
+      counterpart observations as completely separate targets when comparing alternatives.
+
+      These are evidence groupings only. UPRNs can be heterogeneous and address signatures
+      can collide, so no key here is a confirmed registry entity, building, or dwelling.
     columns:
       - name: identity_run_observation_key
         data_tests: [not_null, unique]
@@ -15,7 +24,15 @@ models:
                 values: [EVIDENCE_GROUP_ONLY]
 
   - name: identity_target_alternative_l
-    description: Target-group alternatives for canonical left candidate endpoints.
+    description: |
+      Groups the scored counterparts of a canonical left endpoint by target-hypothesis key.
+      There is one row per left-side observation and counterpart target group.
+
+      Use this memory-bounded helper to collect supporting candidate counts, counterpart
+      dates, and the group's highest score before left and right evidence is combined.
+
+      Left is only a lexical pair position. The group and score remain uncalibrated evidence,
+      not a persistent entity or accepted match.
     columns:
       - name: identity_run_observation_key
         data_tests: [not_null]
@@ -23,7 +40,15 @@ models:
         data_tests: [not_null]
 
   - name: identity_target_alternative_r
-    description: Target-group alternatives for canonical right candidate endpoints.
+    description: |
+      Groups the scored counterparts of a canonical right endpoint by target-hypothesis key.
+      There is one row per right-side observation and counterpart target group.
+
+      Use this with the left-side helper to build complete target-level alternatives while
+      keeping the national aggregation memory bounded.
+
+      Right is only a lexical pair position. The group and score remain uncalibrated evidence,
+      not a persistent entity or accepted match.
     columns:
       - name: identity_run_observation_key
         data_tests: [not_null]
@@ -31,7 +56,16 @@ models:
         data_tests: [not_null]
 
   - name: identity_target_alternative
-    description: One grouped counterpart-target alternative per observation and run.
+    description: |
+      Combines left- and right-side evidence into one counterpart target alternative for a
+      focal observation. There is one row per current-run observation and target-hypothesis
+      key, summarising all candidate counterparts in that evidence group.
+
+      Use this model when repeated EPCs or transactions should count as support for one
+      possible target rather than as separate competitors.
+
+      Only observations with scored candidates appear. Counts, scores, and target keys are
+      still uncalibrated evidence and are not match decisions or durable entities.
     columns:
       - name: target_alternative_key
         data_tests: [not_null, unique]
@@ -41,7 +75,16 @@ models:
         data_tests: [not_null]
 
   - name: identity_target_alternative_ranked
-    description: Target-group ranks and margins retained as uncalibrated evidence.
+    description: |
+      Ranks each observation's grouped target alternatives by their highest match weight.
+      There is one row per current-run observation and target alternative, enriched with
+      rank, competitor count, and the margin to the next target.
+
+      Use this model for calibration sampling and to find observations with close target
+      competition. Ties are resolved deterministically by target key.
+
+      Ranks and margins are uncalibrated diagnostics. They must not be used directly for
+      match acceptance, confidence reporting, or registry promotion.
     columns:
       - name: target_alternative_key
         data_tests: [not_null, unique]

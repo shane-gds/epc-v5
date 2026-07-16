@@ -2,7 +2,17 @@ version: 2
 
 models:
   - name: int_geography_reference_profile
-    description: One classified source representation profile per geography type/code/reference release.
+    description: |
+      Profiles loaded LAD and LPA names-and-codes observations before they become dimension
+      rows. There is one row per geography type, official code, and reference release.
+
+      Use this model to identify unique values, exact duplicates, and conflicting source
+      representations. Deterministic representative fields are populated for every profile
+      so it can be inspected consistently, including profiles marked as conflicts.
+
+      A representative does not resolve a genuine disagreement. Conflicts remain visible
+      here for investigation and are deliberately excluded from `dim_geography`. This model
+      is a quality checkpoint, not a reporting dimension.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -17,7 +27,18 @@ models:
                 values: [UNIQUE, EXACT_DUPLICATE, CONFLICT]
 
   - name: dim_geography
-    description: One official geography type/code/reference-release endpoint from loaded names-and-codes evidence.
+    description: |
+      Provides governed, release-aware reference rows for official geography codes and
+      names. There is one row per geography type, official code, and reference release;
+      the current implementation includes non-conflicting LAD and LPA evidence.
+
+      Use this model for official labels, release-specific reporting, and future
+      entity-to-geography or graph endpoints. Welsh LAD names and LPA co-terminous flags
+      are preserved where supplied.
+
+      This is release-versioned but not a full SCD Type 2 dimension because the sources do
+      not provide effective intervals. It does not allocate entities, infer geography from
+      coordinates, or invent missing hierarchy, country, or validity information.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:

@@ -2,7 +2,17 @@ version: 2
 
 models:
   - name: int_identity_current_run
-    description: The deterministic identity-run definition for the currently loaded PP/EPC inputs.
+    description: |
+      Defines the identity run implied by the currently loaded PPD and EPC files together
+      with the active matching contract versions. There is exactly one row for the current
+      population-and-contract combination.
+
+      Use this model to scope downstream identity work and to find the versions needed to
+      interpret its results. The keys are deterministic, so unchanged inputs produce the
+      same run definition.
+
+      This is a current-run selector, not an execution log, property identifier, cluster,
+      or record of when Splink finished.
     columns:
       - name: identity_run_id
         data_tests: [not_null, unique]
@@ -14,7 +24,16 @@ models:
         data_tests: [not_null]
 
   - name: identity_run_manifest
-    description: Append-only registry of immutable identity input populations.
+    description: |
+      Keeps an append-only catalogue of identity populations and the contract versions used
+      to process them. There is one row per distinct `identity_run_key`; rebuilding an
+      unchanged definition does not add another row.
+
+      Use this model to explain which population, blocking policy, normaliser, comparison
+      model, and decision policy produced a piece of identity evidence.
+
+      `registered_at` is when the run definition was first registered, not when scoring
+      completed. Run keys and IDs are not entity or cluster identifiers.
     columns:
       - name: identity_run_id
         data_tests: [not_null, unique]
@@ -26,7 +45,17 @@ models:
         data_tests: [not_null]
 
   - name: int_identity_observation
-    description: One accepted PP or EPC source observation per immutable identity-run population.
+    description: |
+      Presents staged PPD transactions and EPC certificates through one shared identity
+      contract while keeping source-specific fields and lineage. There is one accepted
+      source record per identity run, including explicitly ineligible observations.
+
+      Use this model for population reconciliation, candidate generation, and versioned
+      address-comparison fields. `eligibility_status` explains why a record can or cannot
+      enter matching.
+
+      Normalised addresses are matching aids, not corrected source facts. The model does
+      not decide matches, invent UPRNs, or identify a premises, building, or dwelling.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
