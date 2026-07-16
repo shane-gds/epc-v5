@@ -24,3 +24,14 @@ select
     'REGISTRY_OBSERVATION',
     cast(registry_entity_id as varchar)
 from {{ source('registry_foundation', 'bridge_registry_observation') }}
+
+union all
+
+select
+    'RESOLVED_ASSIGNMENT',
+    assignment_key
+from {{ ref('bridge_source_record_entity_assignment') }}
+where
+    assignment_status <> 'UNRESOLVED'
+    or registry_entity_id is not null
+    or assignment_confidence is not null

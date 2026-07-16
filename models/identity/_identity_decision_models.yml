@@ -59,3 +59,65 @@ models:
         data_tests: [not_null, unique]
       - name: identity_cluster_key
         data_tests: [not_null, unique]
+
+  - name: bridge_source_record_entity_assignment
+    description: One explicit run-versioned resolution outcome for every eligible source record.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [identity_run_key, source_record_key]
+    columns:
+      - name: assignment_key
+        data_tests: [not_null, unique]
+      - name: source_record_key
+        data_tests: [not_null]
+      - name: source_dataset
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [PPD, EPC_CERTIFICATE]
+      - name: identity_resolution_run_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('identity_run_manifest')
+                field: identity_run_id
+      - name: identity_run_observation_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_identity_observation')
+                field: identity_run_observation_key
+      - name: entity_hypothesis_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('identity_hypothesis')
+                field: identity_hypothesis_key
+      - name: assignment_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [RESOLVED, PROVISIONAL_SINGLE_SOURCE, CONFLICTED, UNRESOLVED, REJECTED]
+      - name: assignment_method
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [NO_CANDIDATE_SINGLETON, UNCALIBRATED_REVIEW_REQUIRED]
+      - name: assignment_confidence_basis
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [NOT_AVAILABLE_UNCALIBRATED]
+      - name: reason_codes
+        data_tests: [not_null]
+      - name: valid_from
+        data_tests: [not_null]
+      - name: is_current
+        data_tests: [not_null]

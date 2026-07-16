@@ -33,7 +33,7 @@ Statuses used below:
 
 | Area | Current state | Evidence |
 |---|---|---|
-| Source control | Private GitHub repository on `main` | Latest pushed commit `595ef55` |
+| Source control | Private GitHub repository on `main` | Latest pushed commit `a8f6fe5` |
 | Audit and Bronze | Complete for current source and geography-reference inputs | 44 leaf files reconciled |
 | Silver | Source observations, allocations and geography references complete | 183,756,030 accepted rows |
 | Quarantine | Append-only fatal-rule evidence | 11 EPC source rows |
@@ -44,6 +44,7 @@ Statuses used below:
 | Identity candidates | Complete for current benchmark policy | 26,301,482 pairs |
 | Identity scoring | Complete, explicitly uncalibrated | 26,301,482 Splink scores |
 | Identity outcomes | Review decisions and singleton/unresolved closure complete | 54,869,297 hypotheses |
+| Assignment ledger | Explicit unresolved source-record outcomes complete | 54,869,297 assignments |
 | Calibration | Deterministic sample ready; explicit labels pending | 1,104 blank-label rows |
 | Core atomic facts | Sale, EPC and recommendation facts complete | 142,368,834 facts |
 | Recommendation aggregate | Certificate-grain evidence cache complete | 23,573,781 certificates |
@@ -460,6 +461,18 @@ duplicating Bronze rows. Parser and member-set drift fail explicitly. Direct and
 header/schema failures leave terminal file evidence, while corrected bytes under the same
 supplied name register as new logical content.
 
+### IMP-034: Publish unresolved assignments without inventing confidence or entities
+
+**Status:** Accepted
+
+Every eligible identity source record receives one run-versioned assignment outcome even
+while calibration is blocked. Current singleton and review-required hypotheses both map
+to `UNRESOLVED`, with distinct method/reason codes, a hypothesis endpoint, null registry
+entity and null confidence under the explicitly uncalibrated policy. Later distinct runs
+close prior current intervals before publishing new outcomes. Reactivating a historical
+deterministic run key fails closed until a unique execution-manifest contract exists;
+otherwise an `A -> B -> A` sequence could corrupt validity history.
+
 ## 6. Validation evidence
 
 The latest completed pre-Phase-2 validation on 15 July 2026 produced:
@@ -499,6 +512,10 @@ The completed Phase 2 identity checkpoint later on 15 July 2026 produced:
 - 20 of 20 Python tests passing after audited reference and container fixtures.
 - 44 of 44 loaded leaf files reconcile: 183,756,041 Bronze rows equal 183,756,030
   accepted rows plus 11 quarantined rows.
+- 29 of 29 current assignment-ledger tests passing across grain, population, row-wise
+  endpoint, temporal, semantic, lifecycle-fixture and no-promotion gates.
+- Assignment incremental idempotency confirmed by unchanged row count, assignment time
+  and order-independent key checksum.
 
 ## 7. Active Phase 2 plan
 
@@ -894,6 +911,48 @@ The following sequence is active. This section will be updated as work progresse
 - Targeted geography/reference/container dbt tests: 63 of 63 passing.
 - Python tests: 20 of 20 passing; dbt parse, Ruff, SQLFluff and diff checks pass.
 - Database size remains approximately 144 GB with approximately 142 GB free.
+
+### 2026-07-16 13:32 UTC: Authoritative unresolved assignment ledger
+
+- Implemented design contract `bridge_source_record_entity_assignment` at one eligible
+  source-record outcome per identity run, with time-bounded validity history.
+- The first authoritative compile attempt was blocked before execution by the editor's
+  dbt language server holding the DuckDB write lock. The process was stopped only after
+  explicit user approval; no database state changed during the failed attempt.
+- National materialisation completed in 11 minutes 57 seconds with one DuckDB thread and
+  the 8 GB memory ceiling.
+- Assignment outcomes:
+
+| Outcome | Method | Rows |
+|---|---|---:|
+| `UNRESOLVED` | `NO_CANDIDATE_SINGLETON` | 24,945,047 |
+| `UNRESOLVED` | `UNCALIBRATED_REVIEW_REQUIRED` | 29,924,250 |
+| **Total** | | **54,869,297** |
+
+- Source coverage comprises 31,295,764 eligible PPD observations and 23,573,533 eligible
+  EPC certificate observations.
+- Every row has an identity hypothesis endpoint and explicit reason codes. Registry entity
+  count and non-null assignment-confidence count remain zero.
+- Assignment validity begins at the immutable identity-run registration time
+  `2026-07-15 10:59:34.521273+00:00`; all current rows have an open exclusive end.
+- Targeted assignment tests: 29 of 29 current gates passing, including grain,
+  population/checksum closure, row-wise source and hypothesis coherence, stable keys,
+  temporal intervals, null-safe semantics, lifecycle fixtures and no-promotion controls.
+- The first combined three-way endpoint-coherence query exhausted its 65.1 GiB spill cap
+  without returning a data mismatch. Replacing it with separate observation and hypothesis
+  joins preserved row-wise checks; both bounded gates passed.
+- Independent review identified unsafe historical run reactivation, partial publication,
+  zero-row proposal and destructive full-refresh paths. The model now fails closed for all
+  four states. Deterministic fixtures cover `PUBLISH`, complete `NO_OP`, zero/partial/mixed
+  failure and `A -> B -> A` reactivation failure; `--full-refresh` fails at compile time.
+- Two early pre-hook attempts resolved `ref()` calls eagerly to the default schema and
+  failed before data access. Deferring hook rendering produced the correct identity-schema
+  relations and completed successfully.
+- The final pre-hook-guarded unchanged rerun completed in 3 minutes 6 seconds and preserved all
+  54,869,297 rows, assignment timestamps and key checksum `6882325064943412218`.
+- The analytical database is approximately 152 GB with approximately 134 GB free.
+- Manual labels and calibrated policy approval remain the blocker for accepted edges,
+  registry UUID promotion, subject assertions and entity-level location/history models.
 
 ## 9. Open decisions and governance dependencies
 
