@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PORT="${1:-${DUCKDB_UI_PORT:-4214}}"
+SSH_USER="${SSH_TUNNEL_USER:-$USER}"
+SSH_HOST="${SSH_TUNNEL_HOST:-$(hostname)}"
+
+printf 'Run this on your laptop:\n'
+printf 'ssh -L %s:127.0.0.1:%s %s@%s\n' "$PORT" "$PORT" "$SSH_USER" "$SSH_HOST"
+printf '\nThen open http://127.0.0.1:%s in your laptop browser.\n' "$PORT"

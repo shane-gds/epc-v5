@@ -45,3 +45,4 @@ neo4j/plugins/
 .vscode/settings.local.json
 .idea/
 .DS_Store
+dbt_internal_packages/

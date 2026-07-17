@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DUCKDB_BIN="${DUCKDB_BIN:-$HOME/.local/bin/duckdb}"
+DB_PATH="${1:-output/duckdb/epc_v4.duckdb}"
+CATALOG_PATH="${DUCKDB_UI_CATALOG:-$HOME/tmp/duckdb-ui-catalog-epc4.db}"
+PORT="${DUCKDB_UI_PORT:-4214}"
+ATTACH_NAME="${DUCKDB_UI_ATTACH_NAME:-epc_v4}"
+
+if [ ! -x "$DUCKDB_BIN" ]; then
+  printf 'DuckDB CLI not found or not executable at %s\n' "$DUCKDB_BIN" >&2
+  exit 1
+fi
+
+if [ ! -f "$DB_PATH" ]; then
+  printf 'Database file not found at %s\n' "$DB_PATH" >&2
+  exit 1
+fi
+
+mkdir -p "$(dirname "$CATALOG_PATH")"
+
+db_sql_path=${DB_PATH//\'/\'\'}
+attach_sql_name=${ATTACH_NAME//\'/\'\'}
+
+printf 'Starting DuckDB UI on http://127.0.0.1:%s\n' "$PORT"
+printf 'Attached database: %s as %s\n' "$DB_PATH" "$ATTACH_NAME"
+printf 'Leave this process running, then open an SSH tunnel from your laptop.\n'
+
+exec "$DUCKDB_BIN" "$CATALOG_PATH" -cmd "
+INSTALL ui;
+LOAD ui;
+SET ui_local_port = ${PORT};
+ATTACH '${db_sql_path}' AS ${attach_sql_name} (READ_ONLY);
+USE ${attach_sql_name};
+CALL start_ui_server();
+"
