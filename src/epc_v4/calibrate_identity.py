@@ -371,6 +371,8 @@ def create_sample(
                     then 'D01_HETEROGENEOUS'
                 when primary_blocking_rule_code = 'P02_SECTOR_PREMISE_EXACT'
                     then 'P02_POSTCODE_CHANGE'
+                when primary_blocking_rule_code = 'P04_LIBPOSTAL_UNIT_BUILDING_ROAD'
+                    then 'P04_LIBPOSTAL_FLAT_RESCUE'
                 else 'P01_EXACT_PREMISE'
             end
         """

@@ -3,6 +3,7 @@ version: 2
 models:
   - name: identity_target_hypothesis
     description: |
+      [Station 5 (The Detective's Scoring Office)]
       Places every eligible current-run observation into a provisional evidence group for
       calibration analysis. EPC records with a supplied UPRN use a UPRN-based key; other
       records use a postcode and normalised premise-address signature.
@@ -25,6 +26,7 @@ models:
 
   - name: identity_target_alternative_l
     description: |
+      [Station 5 (The Detective's Scoring Office)]
       Groups the scored counterparts of a canonical left endpoint by target-hypothesis key.
       There is one row per left-side observation and counterpart target group.
 
@@ -41,6 +43,7 @@ models:
 
   - name: identity_target_alternative_r
     description: |
+      [Station 5 (The Detective's Scoring Office)]
       Groups the scored counterparts of a canonical right endpoint by target-hypothesis key.
       There is one row per right-side observation and counterpart target group.
 
@@ -57,6 +60,7 @@ models:
 
   - name: identity_target_alternative
     description: |
+      [Station 5 (The Detective's Scoring Office)]
       Combines left- and right-side evidence into one counterpart target alternative for a
       focal observation. There is one row per current-run observation and target-hypothesis
       key, summarising all candidate counterparts in that evidence group.
@@ -76,6 +80,7 @@ models:
 
   - name: identity_target_alternative_ranked
     description: |
+      [Station 5 (The Detective's Scoring Office)]
       Ranks each observation's grouped target alternatives by their highest match weight.
       There is one row per current-run observation and target alternative, enriched with
       rank, competitor count, and the margin to the next target.

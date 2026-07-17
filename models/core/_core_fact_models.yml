@@ -3,6 +3,7 @@ version: 2
 models:
   - name: fct_sale_transaction
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Stores typed Price Paid Data transactions independently of property identity. There
       is one row per transaction ID and supplied publisher record status.
 
@@ -37,6 +38,7 @@ models:
 
   - name: fct_epc_certificate
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Stores the canonical typed observation of an EPC certificate within a publisher
       release. There is one row per release key and certificate number. Any repeated natural
       key, including a conflict, uses a deterministic representative while its classification
@@ -72,6 +74,7 @@ models:
 
   - name: fct_epc_recommendation_observation
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Preserves one typed EPC recommendation source observation, including its original
       wording, improvement code, parent outcome, and cautiously parsed cost bounds.
 
@@ -106,6 +109,7 @@ models:
 
   - name: int_epc_recommendation_observed_agg
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Provides a memory-bounded roll-up of recommendation items that have a resolved EPC
       certificate parent. There is one row per certificate with at least one parented item;
       zero-item certificates and orphan recommendations do not appear.
@@ -129,6 +133,7 @@ models:
 
   - name: int_epc_recommendation_agg
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Provides a convenient recommendation summary for every canonical EPC certificate,
       including certificates with no parented recommendation items. There is exactly one
       row per `epc_certificate_key`.

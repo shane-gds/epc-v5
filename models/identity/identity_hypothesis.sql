@@ -14,6 +14,54 @@ with current_observations as (
     where observation.is_identity_eligible
 ),
 
+current_candidates as (
+    select candidate.candidate_pair_key
+    from {{ ref('identity_candidate_pair') }} as candidate
+    inner join {{ ref('int_identity_current_run') }} as current_run
+        on candidate.identity_run_key = current_run.identity_run_key
+),
+
+current_decisions as (
+    select decision.candidate_pair_key
+    from {{ ref('identity_current_match_decision') }} as decision
+),
+
+candidate_without_decision as (
+    select candidate.candidate_pair_key
+    from current_candidates as candidate
+    left join current_decisions as decision
+        on candidate.candidate_pair_key = decision.candidate_pair_key
+    where decision.candidate_pair_key is null
+),
+
+decision_without_candidate as (
+    select decision.candidate_pair_key
+    from current_decisions as decision
+    left join current_candidates as candidate
+        on decision.candidate_pair_key = candidate.candidate_pair_key
+    where candidate.candidate_pair_key is null
+),
+
+duplicate_decisions as (
+    select decision.candidate_pair_key
+    from current_decisions as decision
+    group by decision.candidate_pair_key
+    having count(*) <> 1
+),
+
+scoring_publication_gate as (
+    select
+        case
+            when (select count(*) from candidate_without_decision) > 0
+                then error('Current identity publication has a candidate without a decision')
+            when (select count(*) from decision_without_candidate) > 0
+                then error('Current identity publication has a decision without a candidate')
+            when (select count(*) from duplicate_decisions) > 0
+                then error('Current identity publication has duplicate candidate decisions')
+            else true
+        end as is_complete
+),
+
 hypotheses as (
     select
         {{ stable_sha256(
@@ -47,6 +95,8 @@ hypotheses as (
         on
             observation.identity_run_observation_key
             = candidate_summary.identity_run_observation_key
+    cross join scoring_publication_gate
+    where scoring_publication_gate.is_complete
 )
 
 select *

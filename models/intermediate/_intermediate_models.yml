@@ -3,6 +3,7 @@ version: 2
 models:
   - name: bridge_onsud_allocation_source_record
     description: |
+      [Station 2 (The Scrubbing Station)]
       Restores source-row lineage after exact duplicate ONSUD rows have been combined into
       a single Silver allocation tuple.
 

@@ -16,7 +16,7 @@ select
     arg_max(candidate.run_observation_key_l, score.match_weight)
         as top_counterpart_run_observation_key
 from {{ ref('identity_candidate_pair') }} as candidate
-inner join {{ source('identity_scoring', 'identity_match_score') }} as score
+inner join {{ ref('identity_current_match_score') }} as score
     on candidate.candidate_pair_key = score.candidate_pair_key
 inner join {{ ref('identity_target_hypothesis') }} as counterpart
     on candidate.run_observation_key_l = counterpart.identity_run_observation_key

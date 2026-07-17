@@ -1,7 +1,7 @@
 select
     'ACCEPTED_EDGE' as issue_type,
     candidate_pair_key as evidence_key
-from {{ ref('identity_match_decision') }}
+from {{ ref('identity_current_match_decision') }}
 where is_accepted_edge
 
 union all

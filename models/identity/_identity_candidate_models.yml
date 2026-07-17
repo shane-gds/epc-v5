@@ -2,7 +2,9 @@ version: 2
 
 seeds:
   - name: identity_blocking_policy
-    description: Versioned identity candidate blocking rules and fan-out policy.
+    description: |
+      [Station 4 (Blocking & Candidate Generation)]
+      Versioned identity candidate blocking rules and fan-out policy.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -23,6 +25,7 @@ seeds:
 models:
   - name: identity_scoring_input
     description: |
+      [Station 5 (The Detective's Scoring Office)]
       Projects the current run's eligible observations into the compact feature set expected
       by Splink. There is one row per eligible identity observation, with `unique_id` set to
       its run-specific observation key.
@@ -40,8 +43,30 @@ models:
       - name: source_dataset
         data_tests: [not_null]
 
+  - name: identity_libpostal_candidate_block_profile
+    description: |
+      [Station 4 (Blocking & Candidate Generation)]
+      Profiles exact postcode, unit, and building-number blocks before the libpostal rescue
+      join. There is one block per current identity run and exact component tuple, including
+      admitted and explicitly suppressed blocks.
+
+      Side and pair-product limits are taken from the versioned blocking policy. Suppressed
+      blocks remain auditable and cannot create candidates in dbt or Splink.
+    columns:
+      - name: candidate_block_key
+        data_tests: [not_null, unique]
+      - name: block_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - ADMITTED
+                  - SUPPRESSED_OVERSIZED_SIDE
+                  - SUPPRESSED_OVERSIZED_PRODUCT
+
   - name: identity_candidate_rule_hit
     description: |
+      [Station 4 (Blocking & Candidate Generation)]
       Records why a blocking rule admitted two observations for comparison. There is one
       row per admitting rule, canonical candidate pair, and identity run.
 
@@ -63,6 +88,7 @@ models:
 
   - name: identity_candidate_pair
     description: |
+      [Station 4 (Blocking & Candidate Generation)]
       Provides the canonical observation pairs sent for scoring. There is one unordered
       pair per identity run, with the lower run-observation key stored on the left.
 
@@ -86,6 +112,7 @@ models:
 
   - name: identity_candidate_generation_audit
     description: |
+      [Station 4 (Blocking & Candidate Generation)]
       Summarises candidate-generation volume and operational checksums for the current
       identity run. There is one row per blocking rule that produced at least one hit.
 

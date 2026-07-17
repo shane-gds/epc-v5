@@ -23,9 +23,17 @@ sources:
           - name: match_score_key
             data_tests: [not_null, unique]
           - name: candidate_pair_key
-            data_tests: [not_null, unique]
+            data_tests: [not_null]
           - name: model_status
             data_tests:
               - accepted_values:
                   arguments:
                     values: [UNCALIBRATED, CALIBRATED, RETIRED]
+
+      - name: identity_splink_publication
+        description: Explicit current national score publication for each identity run.
+        columns:
+          - name: identity_run_key
+            data_tests: [not_null, unique]
+          - name: splink_run_id
+            data_tests: [not_null, unique]

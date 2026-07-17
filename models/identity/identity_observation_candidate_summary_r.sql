@@ -16,7 +16,7 @@ select
         struct_pack(weight := decision.match_weight, candidate := candidate.candidate_pair_key)
     ) as top_counterpart_run_observation_key
 from {{ ref('identity_candidate_pair') }} as candidate
-inner join {{ ref('identity_match_decision') }} as decision
+inner join {{ ref('identity_current_match_decision') }} as decision
     on candidate.candidate_pair_key = decision.candidate_pair_key
 inner join {{ ref('int_identity_current_run') }} as current_run
     on candidate.identity_run_key = current_run.identity_run_key

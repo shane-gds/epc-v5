@@ -3,6 +3,7 @@ version: 2
 models:
   - name: int_identity_current_run
     description: |
+      [Station 4 (Blocking & Candidate Generation)]
       Defines the identity run implied by the currently loaded PPD and EPC files together
       with the active matching contract versions. There is exactly one row for the current
       population-and-contract combination.
@@ -22,9 +23,14 @@ models:
         data_tests: [not_null]
       - name: blocking_policy_fingerprint
         data_tests: [not_null]
+      - name: address_parse_run_key
+        data_tests: [not_null]
+      - name: route_population_fingerprint
+        data_tests: [not_null]
 
   - name: identity_run_manifest
     description: |
+      [Station 4 (Blocking & Candidate Generation)]
       Keeps an append-only catalogue of identity populations and the contract versions used
       to process them. There is one row per distinct `identity_run_key`; rebuilding an
       unchanged definition does not add another row.
@@ -46,6 +52,7 @@ models:
 
   - name: int_identity_observation
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Presents staged PPD transactions and EPC certificates through one shared identity
       contract while keeping source-specific fields and lineage. There is one accepted
       source record per identity run, including explicitly ineligible observations.
@@ -88,3 +95,25 @@ models:
                   - INELIGIBLE_MISSING_ADDRESS
                   - INELIGIBLE_MISSING_POSTCODE
                   - INELIGIBLE_INVALID_POSTCODE
+      - name: address_component_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [COMPLETE, INCOMPLETE, NOT_ROUTED]
+
+  - name: int_identity_address_parse
+    description: |
+      [Station 3 (Standardization & Token Normalization)]
+      Exposes the successful selective parser outcome bound to the current identity run.
+      There is one row per routed EPC source record. Components remain versioned parsing
+      evidence and never overwrite the staged source address.
+    columns:
+      - name: address_parse_request_key
+        data_tests: [not_null, unique]
+      - name: source_record_key
+        data_tests: [not_null, unique]
+      - name: parse_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [COMPLETE, INCOMPLETE]

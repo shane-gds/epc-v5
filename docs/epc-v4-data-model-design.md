@@ -515,6 +515,44 @@ No relationship is allowed to pull the whole national graph into a small scope.
 6. Mart state declares `as_of_date`; policy outputs also declare `policy_rule_id`.
 7. Neo4j imports graph marts and does not become an alternative authority.
 
+### 4.5 The six-station factory
+
+The six-station vocabulary is the human-facing map of the physical schemas and model DAG.
+Stations describe responsibility, not necessarily a one-to-one schema boundary. A model's
+schema still follows Chapter 4.1; its Station header tells an engineer where it sits in the
+end-to-end sequence.
+
+| Station | Responsibility | Current EPC v4 implementation |
+|---|---|---|
+| **Station 1 (Ingestion & Raw Landing)** | Register and preserve external bytes and source rows | The Python importer writes audit manifests and immutable Bronze relations. These are declared to dbt as sources, so there are currently no Station 1 dbt models. |
+| **Station 2 (The Scrubbing Station)** | Validate, type, clean and selectively parse difficult source text | Silver staging, quarantine, reconciliation and quality models live here. The flat-trap route sends only qualifying EPC rows to pinned libpostal. A deterministic UK-specific component parser is planned, not currently implemented. |
+| **Station 3 (Standardization & Token Normalization)** | Produce source-neutral tokens, canonical facts, geography and reusable coordinate evidence | Shared PPD/EPC identity observations, parser-result projection, atomic facts, geography references and the one-transform-per-BNG-pair WGS84 cache live here. |
+| **Station 4 (Blocking & Candidate Generation)** | Define a fixed identity run and generate a bounded comparison spine | Versioned run manifests, exact-address rules and strict libpostal rescue use exact unit + complete building-number + compatible road evidence. Oversized blocks are suppressed and audited before pair generation. |
+| **Station 5 (The Detective's Scoring Office)** | Score and compare admitted alternatives | Splink's Fellegi-Sunter model, current published scores and calibration alternatives live here. Vector embeddings and `FLOAT[384]` cosine similarity are not implemented or approved in the current contract. |
+| **Station 6 (The Executive Decision Room)** | Apply policy, preserve ambiguity and publish governed outcomes | Current policy sends all scored pairs to review and publishes singleton or unresolved assignments. It creates no accepted components, Golden Property entity, assignment confidence or registry UUID while calibration remains unavailable. |
+
+The factory analogy does not change the evidence rules. Station 2 parsing cannot rewrite source
+addresses, Station 4 candidates are not matches, Station 5 probabilities are not confidence,
+and Station 6 may allocate a persistent registry UUID only after an approved promotion policy.
+
+#### 4.5.1 Mandatory dbt Station header
+
+Every entry under a schema YAML `models:` block must begin its multiline description with
+exactly one of the six Station labels. The label is the first non-empty line, before the model's
+grain or purpose:
+
+```yaml
+models:
+  - name: stg_epc_certificate_observation
+    description: |
+      [Station 2 (The Scrubbing Station)]
+      Turns accepted domestic EPC rows into typed certificate observations.
+```
+
+`tests/test_model_station_documentation.py` enforces both complete SQL-model documentation and
+the first-line Station label. Source declarations are operational inputs rather than dbt models;
+their descriptions are not subject to this model rule.
+
 ## 5. Naming and Contract Conventions
 
 | Prefix | Meaning | Typical grain |
@@ -985,6 +1023,39 @@ Bronze preserves supplied representation. Common fields are the standard lineage
 
 **Tests.** Natural key/conflict rules; band/range checks; plausible dates; qualitative fields remain text; UPRN parse status. **Non-goals.** No current tenancy, current certificate, legal validity, or final dwelling identity. **Graph analogy.** `EPC` evidence plus a separate subject edge.
 
+#### 11.2a Selective EPC address component parsing
+
+**At a glance.** `[F/C]` Versioned parser evidence for EPC addresses exhibiting the
+multi-number flat trap. **Direct upstream/downstream.** Typed EPC observation -> selective
+route -> pinned libpostal run -> identity comparison fields.
+
+**Grain and materialisation.** `int_epc_address_libpostal_route` has one row per routed EPC
+source record. The external parser cache has one immutable result per distinct parser input,
+runtime artifact and implementation contract; a request bridge retains one row per routed
+source record. **Business problem.** Recover unit, building-number and road roles without
+running a native parser over ordinary addresses or rewriting source evidence.
+
+1. Route only valid-postcode EPC rows with at least two numeric designators and either an
+   explicit unit marker or a flat/maisonette property type. Record the selector and parser
+   input contracts, reason, source lineage and deterministic input key.
+2. Verify the pinned native library, Python extension and model-data checksums before loading
+   libpostal. Parse distinct inputs in bounded batches and retain ordered raw components,
+   grouped components, canonical unit/building/road fields and explicit incomplete/error
+   states.
+3. Publish a successful parser manifest only after every route request reaches exactly one
+   result and no parser errors remain. Failed attempts remain append-only and unresolved
+   errors are retried rather than cached as results. Publish an explicit current parser-run
+   pointer transactionally, and bind that exact run, route fingerprint, runtime and
+   implementation checksums into the identity-run key.
+4. Do not parse PPD addresses with libpostal. PPD's supplied SAON, PAON and street remain the
+   structured comparison evidence. Parser output never replaces EPC source address fields,
+   decides a match, or allocates an entity.
+
+**Tests.** Route selector fixtures; route/request/result closure; runtime-manifest checksum;
+idempotent distinct-input cache; ordered component retention; parser errors fail closed.
+**Non-goals.** No all-row parsing, source correction, automatic identity acceptance or
+registry promotion.
+
 ### 11.3 `stg_epc_recommendation_observation`
 
 **At a glance.** `[F]` Typed recommendation with cautious costs. **Direct upstream/downstream.** Raw recommendation/certificate lookup -> recommendation fact, mapping, aggregate.
@@ -1151,6 +1222,29 @@ source observation ---------------------------> assignment outcome
 | `generated_at` | `TIMESTAMPTZ` | `2026-07-14T11:00:00Z` | Operational time |
 
 **Tests.** Unique run/endpoints; left < right; endpoints exist; no self-pair; accepted rules; candidate count recorded. **Non-goals.** Candidate means "compare", not "same premises". **Graph analogy.** Optional `CANDIDATE_MATCH` relationship in an identity-debug graph.
+
+#### 12.3a Selective libpostal rescue rule
+
+The `P04_LIBPOSTAL_UNIT_BUILDING_ROAD` rule may admit a PPD/EPC pair only when all of the
+following hold: exact valid postcode, exact canonical unit, exact complete building-number
+designator, PPD structured street contained as whole normalized tokens within the EPC parsed
+road, complete component states, and differing full premise comparators. Requiring the
+difference keeps this a recovery rule and prevents overlap with exact-premise blocking.
+Unsupported compound, slash-separated, adjacent or residual number forms produce no building
+designator and therefore cannot enter the rule.
+
+Before pair generation, `identity_libpostal_candidate_block_profile` records PPD-side count,
+EPC-side count and their pair product at postcode + unit + building-number grain. Limits come
+from the versioned blocking policy. Oversized blocks remain visible as suppressed evidence and
+must produce no dbt or Splink candidates. The same directional predicate and block status are
+used by both engines. Admission still means only "score this pair"; it cannot bypass the score,
+decision, alternative, singleton, hypothesis or assignment contracts.
+
+One national Splink artifact is published immutably for an identity run. Publishing another
+artifact requires a new comparison-model version and therefore a new identity-run key. Current
+score and decision views join the explicit publication pointer; historical alternatives remain
+stored but cannot leak into endpoint summaries. Hypotheses fail closed unless candidate keys and
+current decision keys have exact one-to-one closure.
 
 ### 12.4 `int_identity_pair_score`
 

@@ -3,17 +3,20 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from epc_v4.benchmark_libpostal import (
+from epc_v4.address_components import (
     canonical_role_component,
     combine_parsed_components,
-    create_immutable_output_directory,
-    evaluate_parsed_row,
-    fingerprint_directory,
+    complete_number_designator,
     first_number_token,
     normalise_component,
     number_designator,
+)
+from epc_v4.benchmark_libpostal import (
+    create_immutable_output_directory,
+    evaluate_parsed_row,
     summarise_results,
 )
+from epc_v4.libpostal_runtime import fingerprint_directory
 
 
 def test_component_normalisation_preserves_alphanumeric_numbers() -> None:
@@ -24,6 +27,12 @@ def test_component_normalisation_preserves_alphanumeric_numbers() -> None:
     assert canonical_role_component("11-13") == "11-13"
     assert canonical_role_component("Flat 5A", unit=True) == "5A"
     assert number_designator("BRIGHTHAMPTON, 55 - 57") == "55-57"
+    assert complete_number_designator("BRIGHTHAMPTON, 55 - 57") == "55-57"
+    assert complete_number_designator("11/13") is None
+    assert complete_number_designator("11 AND 13") is None
+    assert complete_number_designator("11AB") is None
+    assert complete_number_designator("A11") is None
+    assert complete_number_designator("11/ABC") is None
 
 
 def test_combining_repeated_parser_labels_is_deterministic() -> None:
@@ -68,6 +77,17 @@ def test_evaluate_parsed_row_requires_full_range_and_safe_road_direction() -> No
     assert result["house_number_matches_expected"] is True
     assert result["road_compatible_with_expected"] is False
     assert result["compatible_candidate_recovered"] is False
+
+
+def test_evaluate_parsed_row_never_matches_two_rejected_designators() -> None:
+    def unsupported_parser(_: str) -> list[tuple[str, str]]:
+        return [("flat 5", "unit"), ("11/13", "house_number"), ("high street", "road")]
+
+    result = evaluate_parsed_row("ignored", "11/15", "5", "High Street", unsupported_parser)
+
+    assert result["house_number_matches_expected"] is False
+    assert result["number_roles_recovered"] is False
+    assert result["strict_candidate_recovered"] is False
 
 
 def test_directory_fingerprint_frames_paths_and_contents(tmp_path) -> None:

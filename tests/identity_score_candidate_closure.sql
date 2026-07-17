@@ -3,14 +3,6 @@ with current_run as (
     from {{ ref('int_identity_current_run') }}
 ),
 
-latest_national_run as (
-    select splink_run_id
-    from {{ source('identity_scoring', 'identity_splink_run') }} as splink_run
-    inner join current_run on splink_run.identity_run_key = current_run.identity_run_key
-where splink_run.run_mode = 'NATIONAL' and splink_run.run_status = 'SUCCEEDED'
-qualify row_number() over (order by splink_run.completed_at desc) = 1
-),
-
 current_candidates as (
 select candidate_pair_key
 from {{ ref('identity_candidate_pair') }}
@@ -19,8 +11,7 @@ inner join current_run using (identity_run_key)
 
 current_scores as (
 select candidate_pair_key
-from {{ source('identity_scoring', 'identity_match_score') }}
-inner join latest_national_run using (splink_run_id)
+from {{ ref('identity_current_match_score') }}
 )
 
 select

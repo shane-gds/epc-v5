@@ -3,6 +3,7 @@ version: 2
 models:
   - name: int_geography_reference_profile
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Profiles loaded LAD and LPA names-and-codes observations before they become dimension
       rows. There is one row per geography type, official code, and reference release.
 
@@ -28,6 +29,7 @@ models:
 
   - name: dim_geography
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Provides governed, release-aware reference rows for official geography codes and
       names. There is one row per geography type, official code, and reference release;
       the current implementation includes non-conflicting LAD and LPA evidence.

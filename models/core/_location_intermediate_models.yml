@@ -3,6 +3,7 @@ version: 2
 models:
   - name: int_required_uprn
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Lists the distinct valid UPRNs observed on EPC records that need an ONSUD lookup.
       There is one row per UPRN under the explicitly configured ONSUD release.
 
@@ -25,6 +26,7 @@ models:
 
   - name: int_uprn_location
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Records the direct ONSUD lookup outcome for every required UPRN. There is one row per
       required UPRN, with a clear outcome: uniquely resolved, missing, or conflicting.
 
@@ -53,6 +55,7 @@ models:
 
   - name: int_postcode_coordinate_point
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Deduplicates valid ONSUD coordinate evidence before postcode centroids are calculated.
       There is one row per release, unit postcode, easting, and northing combination.
 
@@ -77,6 +80,7 @@ models:
 
   - name: int_postcode_coordinate
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Provides one approximate British National Grid centroid for each unit postcode in
       the configured ONSUD release. There is one row per release and unit postcode, and
       distinct coordinate points are weighted equally.
@@ -111,6 +115,7 @@ models:
 
   - name: int_postcode_sector_coordinate
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Provides one broad centroid for each true postcode sector in the configured ONSUD
       release. There is one row per release and sector, with every unit-postcode centroid
       receiving equal weight.
@@ -143,6 +148,7 @@ models:
 
   - name: int_required_coordinate_pair
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Acts as the shared registry and transformation queue for canonical British National
       Grid coordinate pairs. There is one row per coordinate pair, CRS combination,
       transform contract, and pinned spatial runtime.
@@ -174,6 +180,7 @@ models:
 
   - name: int_coordinate_wgs84
     description: |
+      [Station 3 (Standardization & Token Normalization)]
       Caches the WGS84 result for each valid required coordinate pair. There is one row per
       `coordinate_key`; unseen pairs are transformed once from EPSG:27700 to EPSG:4326 and
       retained for reuse.

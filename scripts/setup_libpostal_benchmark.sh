@@ -23,7 +23,7 @@ if [ -f "$INSTALL_MANIFEST" ]; then
 import os
 from pathlib import Path
 
-from epc_v4.benchmark_libpostal import (
+from epc_v4.libpostal_runtime import (
     installed_artifact_evidence,
     verify_install_manifest,
 )
@@ -85,7 +85,7 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
-from epc_v4.benchmark_libpostal import installed_artifact_evidence
+from epc_v4.libpostal_runtime import installed_artifact_evidence
 
 prefix = Path(os.environ["LIBPOSTAL_PREFIX"])
 evidence = installed_artifact_evidence(

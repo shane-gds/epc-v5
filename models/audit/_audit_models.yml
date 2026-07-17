@@ -3,6 +3,7 @@ version: 2
 models:
   - name: quarantine_source_record
     description: |
+      [Station 2 (The Scrubbing Station)]
       Keeps source rows that could not be safely turned into typed Silver data. Each row
       records one fatal validation failure, the rule that failed, and the lineage needed
       to find the original file and source row.
@@ -30,6 +31,7 @@ models:
 
   - name: audit_source_file_silver_reconciliation
     description: |
+      [Station 2 (The Scrubbing Station)]
       Shows whether every loaded leaf source file is fully accounted for from its audit
       manifest, through Bronze, and into either Silver or quarantine.
 
@@ -50,6 +52,7 @@ models:
 
   - name: audit_silver_quality_profile
     description: |
+      [Station 2 (The Scrubbing Station)]
       Provides a quick health summary of the current Silver data, including accepted row
       counts and useful exception counts such as invalid postcodes, missing UPRNs,
       conflicting natural keys, orphan recommendations, and quarantine reasons.

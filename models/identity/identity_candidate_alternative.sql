@@ -2,9 +2,7 @@
 
 with current_scores as (
     select score.*
-    from {{ source('identity_scoring', 'identity_match_score') }} as score
-    inner join {{ ref('int_identity_current_run') }} as current_run
-        on score.identity_run_key = current_run.identity_run_key
+    from {{ ref('identity_current_match_score') }} as score
 ),
 
 endpoint_alternatives as (

@@ -1,0 +1,40 @@
+version: 2
+
+sources:
+  - name: identity_address_parser
+    description: Externally orchestrated, versioned selective libpostal parse evidence.
+    schema: identity
+    tables:
+      - name: identity_address_parse_run
+        columns:
+          - name: address_parse_run_key
+            data_tests: [not_null, unique]
+          - name: run_status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [RUNNING, SUCCEEDED, FAILED]
+
+      - name: identity_address_parse_request
+        columns:
+          - name: address_parse_request_key
+            data_tests: [not_null, unique]
+          - name: route_selection_key
+            data_tests: [not_null]
+
+      - name: identity_address_parse_publication
+        columns:
+          - name: publication_name
+            data_tests: [not_null, unique]
+          - name: address_parse_run_key
+            data_tests: [not_null]
+
+      - name: identity_address_parse_result
+        columns:
+          - name: address_parse_result_key
+            data_tests: [not_null, unique]
+          - name: parse_status
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [COMPLETE, INCOMPLETE]

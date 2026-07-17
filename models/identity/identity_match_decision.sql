@@ -14,25 +14,9 @@ with current_run as (
     from {{ ref('int_identity_current_run') }}
 ),
 
-current_splink_run as (
-    select
-        splink_run.splink_run_id,
-        splink_run.identity_run_key,
-        splink_run.model_sha256
-    from {{ source('identity_scoring', 'identity_splink_run') }} as splink_run
-    inner join current_run
-        on splink_run.identity_run_key = current_run.identity_run_key
-    where
-        splink_run.run_mode = 'NATIONAL'
-        and splink_run.run_status = 'SUCCEEDED'
-    qualify row_number() over (order by splink_run.completed_at desc) = 1
-),
-
 scores as (
     select score.*
-    from {{ source('identity_scoring', 'identity_match_score') }} as score
-    inner join current_splink_run
-        on score.splink_run_id = current_splink_run.splink_run_id
+    from {{ ref('identity_current_match_score') }} as score
 ),
 
 decisions as (

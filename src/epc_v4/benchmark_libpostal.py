@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 import argparse
-import ctypes
 import hashlib
 import importlib.metadata
-import importlib.util
 import json
 import platform
-import re
 import shutil
 import subprocess
 import threading
 import time
-from collections import defaultdict
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,19 +18,26 @@ import duckdb
 import pandas as pd
 import psutil
 
+from epc_v4.address_components import (
+    canonical_role_component,
+    combine_parsed_components,
+    complete_number_designator,
+    normalise_component,
+    number_designator,
+)
+from epc_v4.libpostal_runtime import (
+    LIBPOSTAL_COMMIT,
+    PYPPOSTAL_COMMIT,
+    file_sha256,
+    fingerprint_files,
+    installed_artifact_evidence,
+    load_libpostal_parser,
+    verify_install_manifest,
+)
 from epc_v4.stable_keys import stable_sha256
 
-LIBPOSTAL_COMMIT = "25099c506612b34b23b1bfe286ca6321fcf06f35"
-PYPPOSTAL_COMMIT = "d6666a4f6a2ae0e7b83e037a35412f0f6b45c318"
-BENCHMARK_CONTRACT_VERSION = "libpostal_epc_ppd_v5"
+BENCHMARK_CONTRACT_VERSION = "libpostal_epc_ppd_v6"
 DEFAULT_SAMPLE_SEED = "epc-v4-libpostal-default-v1"
-
-NON_ALNUM = re.compile(r"[^A-Z0-9]+")
-NUMBER_TOKEN = re.compile(r"(?<![A-Z0-9])([0-9]+[A-Z]?)(?![A-Z0-9])")
-NUMBER_DESIGNATOR = re.compile(
-    r"(?<![A-Z0-9])([0-9]+[A-Z]?(?:[ ]*-[ ]*[0-9]+[A-Z]?)?)(?![A-Z0-9])"
-)
-UNIT_PREFIX = re.compile(r"^(FLAT|APARTMENT|APT|UNIT|ROOM|MAISONETTE)[ ]*")
 
 SYNTHETIC_FIXTURES = (
     {
@@ -126,45 +129,6 @@ class ResourceMonitor:
         }
 
 
-def normalise_component(value: Any) -> str | None:
-    if value is None or pd.isna(value):
-        return None
-    normalised = NON_ALNUM.sub(" ", str(value).upper()).strip()
-    return normalised or None
-
-
-def first_number_token(value: Any) -> str | None:
-    normalised = normalise_component(value)
-    if normalised is None:
-        return None
-    match = NUMBER_TOKEN.search(normalised)
-    return match.group(1) if match else None
-
-
-def canonical_role_component(value: Any, *, unit: bool = False) -> str | None:
-    if value is None or pd.isna(value):
-        return None
-    normalised = str(value).upper().strip()
-    if unit:
-        normalised = UNIT_PREFIX.sub("", normalised)
-    canonical = re.sub(r"[^A-Z0-9/-]+", "", normalised)
-    return canonical or None
-
-
-def number_designator(value: Any) -> str | None:
-    if value is None or pd.isna(value):
-        return None
-    match = NUMBER_DESIGNATOR.search(str(value).upper())
-    return re.sub(r"[ ]+", "", match.group(1)) if match else None
-
-
-def combine_parsed_components(parsed: list[tuple[str, str]]) -> dict[str, str]:
-    grouped: dict[str, list[str]] = defaultdict(list)
-    for component, label in parsed:
-        grouped[str(label)].append(str(component))
-    return {label: " ".join(values) for label, values in grouped.items()}
-
-
 def evaluate_parsed_row(
     parser_input: str,
     expected_house_number: str | None,
@@ -177,16 +141,36 @@ def evaluate_parsed_row(
     parsed_house = parsed.get("house")
     parsed_unit = parsed.get("unit")
     parsed_road = parsed.get("road")
-    house_designator = number_designator(parsed_house_number)
+    house_designator = complete_number_designator(parsed_house_number)
     unit_comparison = canonical_role_component(parsed_unit, unit=True)
     parsed_paon_comparison = canonical_role_component(
         " ".join(value for value in (parsed_house, parsed_house_number) if value)
     )
     road_comparison = normalise_component(parsed_road)
     expected_road_comparison = normalise_component(expected_road)
-    expected_house_designator = number_designator(expected_house_number)
+    expected_house_designator = complete_number_designator(expected_house_number)
     expected_paon_comparison = canonical_role_component(expected_house_number)
     expected_unit_comparison = canonical_role_component(expected_unit, unit=True)
+    house_number_matches = (
+        house_designator is not None
+        and expected_house_designator is not None
+        and house_designator == expected_house_designator
+    )
+    paon_matches = (
+        parsed_paon_comparison is not None
+        and expected_paon_comparison is not None
+        and parsed_paon_comparison == expected_paon_comparison
+    )
+    unit_matches = (
+        unit_comparison is not None
+        and expected_unit_comparison is not None
+        and unit_comparison == expected_unit_comparison
+    )
+    road_matches = (
+        road_comparison is not None
+        and expected_road_comparison is not None
+        and road_comparison == expected_road_comparison
+    )
     roles_differ = (
         expected_house_designator is not None
         and expected_house_designator != number_designator(expected_unit)
@@ -194,9 +178,7 @@ def evaluate_parsed_row(
     road_compatible = (
         road_comparison is not None
         and expected_road_comparison is not None
-        and (
-            expected_road_comparison in road_comparison
-        )
+        and f" {expected_road_comparison} " in f" {road_comparison} "
     )
 
     return {
@@ -212,10 +194,10 @@ def evaluate_parsed_row(
         "house_number_present": parsed_house_number is not None,
         "unit_present": parsed_unit is not None,
         "road_present": parsed_road is not None,
-        "house_number_matches_expected": house_designator == expected_house_designator,
-        "paon_full_matches_expected": parsed_paon_comparison == expected_paon_comparison,
-        "unit_matches_expected": unit_comparison == expected_unit_comparison,
-        "road_matches_expected": road_comparison == expected_road_comparison,
+        "house_number_matches_expected": house_number_matches,
+        "paon_full_matches_expected": paon_matches,
+        "unit_matches_expected": unit_matches,
+        "road_matches_expected": road_matches,
         "road_compatible_with_expected": road_compatible,
         "role_swap": (
             roles_differ
@@ -223,18 +205,18 @@ def evaluate_parsed_row(
             and unit_comparison == expected_house_designator
         ),
         "number_roles_recovered": (
-            house_designator == expected_house_designator
-            and unit_comparison == expected_unit_comparison
+            house_number_matches
+            and unit_matches
         ),
         "compatible_candidate_recovered": (
-            house_designator == expected_house_designator
-            and unit_comparison == expected_unit_comparison
+            house_number_matches
+            and unit_matches
             and road_compatible
         ),
         "strict_candidate_recovered": (
-            house_designator == expected_house_designator
-            and unit_comparison == expected_unit_comparison
-            and road_comparison == expected_road_comparison
+            house_number_matches
+            and unit_matches
+            and road_matches
         ),
     }
 
@@ -305,6 +287,7 @@ def _benchmark_sample_query() -> str:
                 observation.source_record_key as epc_source_record_key,
                 observation.postcode,
                 observation.premise_address_comparison,
+                route.parser_input,
                 certificate.address1,
                 certificate.address2,
                 certificate.address3,
@@ -317,6 +300,8 @@ def _benchmark_sample_query() -> str:
             inner join current_run using (identity_run_key)
             inner join silver.stg_epc_certificate_observation as certificate
                 on observation.source_record_key = certificate.source_record_key
+            inner join silver.int_epc_address_libpostal_route as route
+                on observation.source_record_key = route.source_record_key
             where
                 observation.source_dataset = 'EPC_CERTIFICATE'
                 and observation.is_identity_eligible
@@ -383,17 +368,7 @@ def _benchmark_sample_query() -> str:
                 epc.epc_source_record_key,
                 pp.pp_source_record_key,
                 epc.postcode,
-                epc.address1,
-                epc.address2,
-                epc.address3,
-                concat_ws(
-                    ', ',
-                    epc.address1,
-                    epc.address2,
-                    epc.address3,
-                    epc.postcode,
-                    'United Kingdom'
-                ) as parser_input,
+                epc.parser_input,
                 epc.number_tokens[1] as alignment_unit_token,
                 epc.number_tokens[2] as alignment_house_number_token,
                 pp.paon as expected_house_number,
@@ -445,19 +420,6 @@ def extract_benchmark_sample(
         ).fetchdf()
     finally:
         connection.close()
-
-
-def _load_libpostal_parser(library_path: Path) -> Callable[[str], list[tuple[str, str]]]:
-    if not library_path.is_file():
-        raise FileNotFoundError(f"libpostal shared library not found: {library_path}")
-    ctypes.CDLL(str(library_path), mode=ctypes.RTLD_GLOBAL)
-    try:
-        from postal.parser import parse_address
-    except ImportError as error:
-        raise RuntimeError(
-            "Python package 'postal' is not installed; run the pinned benchmark setup"
-        ) from error
-    return parse_address
 
 
 def parse_benchmark(
@@ -580,51 +542,23 @@ def evaluate_candidate_fanout(database_path: Path, results: pd.DataFrame) -> dic
         connection.register("parsed_libpostal_benchmark", parsed)
         fanout = connection.execute(
             r"""
-            with pp as (
+            with current_run as (
+                select identity_run_key
+                from identity.int_identity_current_run
+            ),
+
+            pp as (
                 select
-                    postcode,
-                    nullif(
-                        regexp_replace(
-                            regexp_extract(
-                                upper(paon),
-                                '([0-9]+[A-Z]?([ ]*-[ ]*[0-9]+[A-Z]?)?)',
-                                1
-                            ),
-                            '[ ]+',
-                            '',
-                            'g'
-                        ),
-                        ''
-                    ) as paon_designator,
-                    nullif(
-                        regexp_replace(
-                            regexp_replace(
-                                upper(saon),
-                                '^(FLAT|APARTMENT|APT|UNIT|ROOM|MAISONETTE)[ ]*',
-                                ''
-                            ),
-                            '[^A-Z0-9/-]+',
-                            '',
-                            'g'
-                        ),
-                        ''
-                    ) as saon_comparison,
-                    nullif(
-                        trim(
-                            regexp_replace(
-                                regexp_replace(upper(street), '[^A-Z0-9]+', ' ', 'g'),
-                                '\s+',
-                                ' ',
-                                'g'
-                            )
-                        ),
-                        ''
-                    ) as street_comparison
-                from silver.stg_pp_transaction_observation
+                    observation.postcode,
+                    observation.building_number_designator as paon_designator,
+                    observation.unit_identifier_comparison as saon_comparison,
+                    observation.road_comparison as street_comparison
+                from identity.int_identity_observation as observation
+                inner join current_run using (identity_run_key)
                 where
-                    postcode_parse_status = 'VALID'
-                    and paon is not null
-                    and street is not null
+                    observation.source_dataset = 'PPD'
+                    and observation.is_identity_eligible
+                    and observation.address_component_status = 'COMPLETE'
             )
 
             select
@@ -637,12 +571,18 @@ def evaluate_candidate_fanout(database_path: Path, results: pd.DataFrame) -> dic
                       and parsed.parsed_road_comparison = pp.street_comparison
                 ) as full_component_pair_count
                 ,count(pp.postcode) filter (
-                    where contains(parsed.parsed_road_comparison, pp.street_comparison)
+                    where contains(
+                        concat(' ', parsed.parsed_road_comparison, ' '),
+                        concat(' ', pp.street_comparison, ' ')
+                    )
                 ) as compatible_building_only_pair_count
                 ,count(pp.postcode) filter (
                     where pp.saon_comparison = parsed.parsed_unit_comparison
                       and (
-                          contains(parsed.parsed_road_comparison, pp.street_comparison)
+                           contains(
+                               concat(' ', parsed.parsed_road_comparison, ' '),
+                               concat(' ', pp.street_comparison, ' ')
+                           )
                       )
                 ) as compatible_full_component_pair_count
             from parsed_libpostal_benchmark as parsed
@@ -677,31 +617,9 @@ def evaluate_candidate_fanout(database_path: Path, results: pd.DataFrame) -> dic
     }
 
 
-def file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _add_framed_bytes(digest: Any, value: bytes) -> None:
     digest.update(len(value).to_bytes(8, byteorder="big", signed=False))
     digest.update(value)
-
-
-def fingerprint_directory(path: Path) -> tuple[str, int]:
-    digest = hashlib.sha256()
-    total_size = 0
-    for file_path in sorted(candidate for candidate in path.rglob("*") if candidate.is_file()):
-        relative_path = file_path.relative_to(path).as_posix().encode()
-        _add_framed_bytes(digest, relative_path)
-        digest.update(file_path.stat().st_size.to_bytes(8, byteorder="big", signed=False))
-        with file_path.open("rb") as handle:
-            while chunk := handle.read(1024 * 1024):
-                total_size += len(chunk)
-                digest.update(chunk)
-    return digest.hexdigest(), total_size
 
 
 def fingerprint_frame(frame: pd.DataFrame) -> str:
@@ -715,76 +633,8 @@ def fingerprint_frame(frame: pd.DataFrame) -> str:
     return digest.hexdigest()
 
 
-def fingerprint_files(paths: list[Path], root: Path) -> str:
-    digest = hashlib.sha256()
-    for path in sorted(paths):
-        _add_framed_bytes(digest, path.relative_to(root).as_posix().encode())
-        digest.update(path.stat().st_size.to_bytes(8, byteorder="big", signed=False))
-        with path.open("rb") as handle:
-            while chunk := handle.read(1024 * 1024):
-                digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _write_json(path: Path, value: dict[str, Any]) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def installed_artifact_evidence(
-    library_path: Path,
-    data_root: Path,
-) -> dict[str, Any]:
-    resolved_library = library_path.resolve(strict=True)
-    postal_spec = importlib.util.find_spec("postal")
-    if postal_spec is None or not postal_spec.submodule_search_locations:
-        raise RuntimeError("Python package 'postal' is not installed")
-    postal_root = Path(next(iter(postal_spec.submodule_search_locations)))
-    extension_files = sorted(postal_root.glob("*.so"))
-    if not extension_files:
-        raise RuntimeError(f"No pypostal extension files found under {postal_root}")
-    model_sha256, model_size = fingerprint_directory(data_root)
-    return {
-        "libpostal_library_path": str(resolved_library),
-        "libpostal_library_sha256": file_sha256(resolved_library),
-        "pypostal_extension_root": str(postal_root),
-        "pypostal_extension_file_count": len(extension_files),
-        "pypostal_extensions_sha256": fingerprint_files(extension_files, postal_root),
-        "libpostal_model_data_sha256": model_sha256,
-        "libpostal_model_data_bytes": model_size,
-    }
-
-
-def verify_install_manifest(
-    manifest_path: Path,
-    actual: dict[str, Any],
-    libpostal_commit: str,
-    pypostal_commit: str,
-    model_variant: str,
-) -> dict[str, Any]:
-    if not manifest_path.is_file():
-        raise FileNotFoundError(
-            f"Pinned libpostal install manifest not found: {manifest_path}; "
-            "run make libpostal-setup"
-        )
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    expected = {
-        "libpostal_commit": libpostal_commit,
-        "pypostal_commit": pypostal_commit,
-        "model_variant": model_variant,
-        "libpostal_library_sha256": actual["libpostal_library_sha256"],
-        "pypostal_extensions_sha256": actual["pypostal_extensions_sha256"],
-        "libpostal_model_data_sha256": actual["libpostal_model_data_sha256"],
-    }
-    mismatches = {
-        key: {"manifest": manifest.get(key), "actual": value}
-        for key, value in expected.items()
-        if manifest.get(key) != value
-    }
-    if mismatches:
-        raise RuntimeError(
-            f"Installed libpostal artifacts do not match their manifest: {mismatches}"
-        )
-    return manifest
 
 
 def git_worktree_evidence(project_root: Path) -> dict[str, Any]:
@@ -838,6 +688,8 @@ def run_benchmark(args: argparse.Namespace) -> Path:
         )
         implementation_files = [
             Path(__file__).resolve(),
+            project_root / "src/epc_v4/address_components.py",
+            project_root / "src/epc_v4/libpostal_runtime.py",
             project_root / "scripts/setup_libpostal_benchmark.sh",
             project_root / "pyproject.toml",
         ]
@@ -867,7 +719,7 @@ def run_benchmark(args: argparse.Namespace) -> Path:
 
         rss_before_load = psutil.Process().memory_info().rss
         parser_load_started = time.perf_counter()
-        parse_address = _load_libpostal_parser(args.library)
+        parse_address = load_libpostal_parser(args.library)
         parser_load_seconds = time.perf_counter() - parser_load_started
         rss_after_load = psutil.Process().memory_info().rss
 

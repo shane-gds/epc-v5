@@ -53,6 +53,43 @@ population as (
     from identity_inputs
 ),
 
+parser_publication as (
+    select *
+    from {{ source('identity_address_parser', 'identity_address_parse_publication') }}
+),
+
+parser_runs as (
+    select *
+    from {{ source('identity_address_parser', 'identity_address_parse_run') }}
+),
+
+address_parse_run as (
+    select parser_run.*
+    from parser_publication
+    inner join parser_runs as parser_run
+        on parser_publication.address_parse_run_key = parser_run.address_parse_run_key
+    inner join {{ ref('int_epc_address_libpostal_route_manifest') }} as route_manifest
+        on
+            parser_run.route_population_fingerprint
+            = route_manifest.route_population_fingerprint
+            and parser_run.expected_request_count
+            = route_manifest.routed_observation_count
+            and parser_run.distinct_input_count
+            = route_manifest.distinct_parser_input_count
+            and parser_run.parsed_result_count
+            = route_manifest.distinct_parser_input_count
+    where
+        parser_publication.publication_name = 'CURRENT_IDENTITY'
+        and parser_run.run_status = 'SUCCEEDED'
+        and parser_run.parse_error_count = 0
+        and parser_run.selector_contract_version
+        = '{{ var("identity_address_selector_contract_version") }}'
+        and parser_run.parser_input_contract_version
+        = '{{ var("identity_libpostal_input_contract_version") }}'
+        and parser_run.parser_contract_version
+        = '{{ var("identity_libpostal_parser_contract_version") }}'
+),
+
 keyed as (
     select
         {{ stable_sha256(
@@ -61,9 +98,14 @@ keyed as (
             [
                 'population.population_fingerprint',
                 'blocking_policy.blocking_policy_fingerprint',
+                'address_parse_run.route_population_fingerprint',
+                'address_parse_run.address_parse_run_key',
+                'address_parse_run.runtime_artifact_key',
+                'address_parse_run.implementation_sha256',
                 "'" ~ var('identity_input_algorithm_version') ~ "'",
                 "'" ~ var('identity_address_normaliser_version') ~ "'",
                 "'" ~ var('identity_eligibility_contract_version') ~ "'",
+                "'" ~ var('identity_address_component_contract_version') ~ "'",
                 "'" ~ var('identity_comparison_model_version') ~ "'",
                 "'" ~ var('identity_decision_policy_version') ~ "'"
             ]
@@ -72,9 +114,19 @@ keyed as (
         population.input_source_file_count,
         population.input_release_keys,
         blocking_policy.blocking_policy_fingerprint,
-        blocking_policy.blocking_rule_count
+        blocking_policy.blocking_rule_count,
+        address_parse_run.address_parse_run_id,
+        address_parse_run.address_parse_run_key,
+        address_parse_run.route_population_fingerprint,
+        address_parse_run.selector_contract_version,
+        address_parse_run.parser_input_contract_version,
+        address_parse_run.parser_contract_version,
+        address_parse_run.runtime_artifact_key,
+        address_parse_run.implementation_sha256,
+        address_parse_run.expected_request_count as routed_address_count
     from population
     cross join blocking_policy
+    cross join address_parse_run
 )
 
 select
@@ -93,9 +145,20 @@ select
     input_release_keys,
     blocking_policy_fingerprint,
     blocking_rule_count,
+    address_parse_run_id,
+    address_parse_run_key,
+    route_population_fingerprint,
+    selector_contract_version,
+    parser_input_contract_version,
+    parser_contract_version,
+    runtime_artifact_key,
+    implementation_sha256 as parser_implementation_sha256,
+    routed_address_count,
     '{{ var("identity_input_algorithm_version") }}' as algorithm_version,
     '{{ var("identity_address_normaliser_version") }}' as normaliser_version,
     '{{ var("identity_eligibility_contract_version") }}' as eligibility_contract_version,
+    '{{ var("identity_address_component_contract_version") }}'
+        as address_component_contract_version,
     '{{ var("identity_blocking_policy_version") }}' as blocking_policy_version,
     '{{ var("identity_comparison_model_version") }}' as comparison_model_version,
     '{{ var("identity_decision_policy_version") }}' as decision_policy_version,

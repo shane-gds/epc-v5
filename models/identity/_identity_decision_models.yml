@@ -1,8 +1,33 @@
 version: 2
 
 models:
+  - name: identity_current_match_score
+    description: |
+      [Station 5 (The Detective's Scoring Office)]
+      Exposes scores only from the explicitly published national Splink execution for the
+      current identity run. There is one score per current candidate; historical and
+      alternative model artifacts remain persisted but are excluded from this view.
+    columns:
+      - name: match_score_key
+        data_tests: [not_null, unique]
+      - name: candidate_pair_key
+        data_tests: [not_null, unique]
+
+  - name: identity_current_match_decision
+    description: |
+      [Station 6 (The Executive Decision Room)]
+      Exposes decisions only for the explicitly published national Splink execution. There
+      is one current decision per candidate after score/decision closure; historical
+      decisions remain available in `identity_match_decision`.
+    columns:
+      - name: match_decision_key
+        data_tests: [not_null, unique]
+      - name: candidate_pair_key
+        data_tests: [not_null, unique]
+
   - name: identity_observation_candidate_summary_l
     description: |
+      [Station 6 (The Executive Decision Room)]
       Summarises scored candidates for observations that appear on the canonical left side
       of a current-run pair. There is one row per left-side observation with at least one
       candidate, including counts and the highest observed match weight.
@@ -17,6 +42,7 @@ models:
 
   - name: identity_observation_candidate_summary_r
     description: |
+      [Station 6 (The Executive Decision Room)]
       Summarises scored candidates for observations that appear on the canonical right side
       of a current-run pair. There is one row per right-side observation with at least one
       candidate, including counts and the highest observed match weight.
@@ -31,8 +57,9 @@ models:
 
   - name: identity_match_decision
     description: |
-      Applies the current decision policy to each score from the latest successful national
-      Splink run. There is one row per persisted candidate score and policy version.
+      [Station 6 (The Executive Decision Room)]
+      Applies the current decision policy to each score from the explicitly published
+      national Splink run. There is one row per persisted candidate score and policy version.
 
       Use this model for review prioritisation and as the governed boundary between raw
       scores and later hypotheses. It keeps links to the candidate, identity run, Splink
@@ -44,7 +71,7 @@ models:
       - name: match_decision_key
         data_tests: [not_null, unique]
       - name: candidate_pair_key
-        data_tests: [not_null, unique]
+        data_tests: [not_null]
       - name: decision_outcome
         data_tests:
           - accepted_values:
@@ -58,6 +85,7 @@ models:
 
   - name: identity_candidate_alternative
     description: |
+      [Station 5 (The Detective's Scoring Office)]
       Turns every scored candidate pair into an alternative from each endpoint's point of
       view. There is one row per focal observation and candidate pair, so each pair appears
       twice with an endpoint-level rank and margin to the next candidate.
@@ -70,6 +98,7 @@ models:
 
   - name: identity_observation_candidate_summary
     description: |
+      [Station 6 (The Executive Decision Room)]
       Combines the left and right helper tables into one candidate profile per current-run
       observation that has at least one scored candidate. There is one row per qualifying
       run observation.
@@ -87,6 +116,7 @@ models:
 
   - name: identity_hypothesis
     description: |
+      [Station 6 (The Executive Decision Room)]
       Gives every eligible observation an explicit current-run outcome. Records with no
       candidate become `SINGLETON_NO_CANDIDATE`; records with candidate evidence become
       `UNRESOLVED_REVIEW`.
@@ -109,6 +139,7 @@ models:
 
   - name: identity_cluster_membership
     description: |
+      [Station 6 (The Executive Decision Room)]
       Exposes current hypotheses through a cluster-membership-shaped interface. There is one
       row per current-run observation and one run-specific cluster.
 
@@ -125,6 +156,7 @@ models:
 
   - name: bridge_source_record_entity_assignment
     description: |
+      [Station 6 (The Executive Decision Room)]
       This is the best place to start when you want to know what happened to an eligible
       PPD or EPC record during identity matching. There is one assignment version for each
       source record's outcome in an identity run.

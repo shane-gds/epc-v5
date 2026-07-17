@@ -19,9 +19,13 @@ vars:
   onsud_release_label: DEC_2025
   identity_address_normaliser_version: identity_address_v2
   identity_eligibility_contract_version: identity_eligibility_v2
-  identity_input_algorithm_version: identity_input_v2
-  identity_blocking_policy_version: identity_blocking_benchmark_v1
-  identity_comparison_model_version: splink_benchmark_v1
+  identity_input_algorithm_version: identity_input_v3
+  identity_address_selector_contract_version: epc_flat_trap_route_v1
+  identity_libpostal_input_contract_version: epc_address_lines_postcode_gb_v1
+  identity_libpostal_parser_contract_version: libpostal_uk_flat_v1
+  identity_address_component_contract_version: identity_address_components_v1
+  identity_blocking_policy_version: identity_blocking_libpostal_v2
+  identity_comparison_model_version: splink_benchmark_v2
   identity_decision_policy_version: identity_decision_uncalibrated_v1
   coordinate_rounding_scale: 3
   coordinate_source_crs: EPSG:27700

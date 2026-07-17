@@ -7,7 +7,7 @@ with current_candidates as (
 
 current_decisions as (
     select candidate_pair_key
-    from {{ ref('identity_match_decision') }} as decision
+    from {{ ref('identity_current_match_decision') }} as decision
     inner join {{ ref('int_identity_current_run') }} as current_run
         on decision.identity_run_key = current_run.identity_run_key
 )

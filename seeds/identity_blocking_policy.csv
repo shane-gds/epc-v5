@@ -4,3 +4,9 @@ identity_blocking_benchmark_v1,P01_POSTCODE_PREMISE_EXACT,p01_v1,20,PROBABILISTI
 identity_blocking_benchmark_v1,P02_SECTOR_PREMISE_EXACT,p02_v2,30,PROBABILISTIC,true,PPD_EPC,,,ADMIT,Exact postcode sector and source-neutral premise comparator with differing full postcode
 identity_blocking_benchmark_v1,P03_POSTCODE_NUMBER,p03_v1,40,BENCHMARK,false,PPD_EPC,250,10000,SUPPRESS,Exact postcode and first numeric token; disabled until tail benchmark passes
 identity_blocking_benchmark_v1,X01_POSTCODE_ONLY,x01_v1,999,PROHIBITED,false,ALL,,,REJECT_CONFIGURATION,Unbounded postcode-only rule is prohibited
+identity_blocking_libpostal_v2,D01_EXACT_UPRN,d01_v1,10,DIRECT_IDENTIFIER,true,EPC_EPC,,,REVIEW,Same supplied valid UPRN; never sufficient alone for dwelling promotion
+identity_blocking_libpostal_v2,P01_POSTCODE_PREMISE_EXACT,p01_v1,20,PROBABILISTIC,true,PPD_EPC,,,ADMIT,Exact postcode and source-neutral premise comparator
+identity_blocking_libpostal_v2,P02_SECTOR_PREMISE_EXACT,p02_v2,30,PROBABILISTIC,true,PPD_EPC,,,ADMIT,Exact postcode sector and source-neutral premise comparator with differing full postcode
+identity_blocking_libpostal_v2,P04_LIBPOSTAL_UNIT_BUILDING_ROAD,p04_v1,40,PROBABILISTIC,true,PPD_EPC,20,100,SUPPRESS,Same postcode with exact unit and building-number plus directional compatible road from selective pinned libpostal evidence
+identity_blocking_libpostal_v2,P03_POSTCODE_NUMBER,p03_v1,50,BENCHMARK,false,PPD_EPC,250,10000,SUPPRESS,Exact postcode and first numeric token; disabled until tail benchmark passes
+identity_blocking_libpostal_v2,X01_POSTCODE_ONLY,x01_v1,999,PROHIBITED,false,ALL,,,REJECT_CONFIGURATION,Unbounded postcode-only rule is prohibited

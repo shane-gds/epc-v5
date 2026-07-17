@@ -123,6 +123,60 @@ raw_rule_hits as (
             and epc.source_dataset = 'EPC_CERTIFICATE'
     inner join enabled_policy as policy
         on policy.rule_code = 'P02_SECTOR_PREMISE_EXACT'
+
+    union all
+
+    select
+        pp.identity_run_id,
+        pp.identity_run_key,
+        least(pp.identity_run_observation_key, epc.identity_run_observation_key),
+        greatest(pp.identity_run_observation_key, epc.identity_run_observation_key),
+        case
+            when pp.identity_run_observation_key < epc.identity_run_observation_key
+                then pp.identity_observation_key
+            else epc.identity_observation_key
+        end,
+        case
+            when pp.identity_run_observation_key < epc.identity_run_observation_key
+                then epc.identity_observation_key
+            else pp.identity_observation_key
+        end,
+        policy.policy_version,
+        policy.rule_code,
+        policy.rule_logic_version,
+        policy.rule_priority,
+        policy.evidence_class,
+        policy.source_pair_scope
+    from {{ ref('identity_libpostal_candidate_block_profile') }} as candidate_block
+    inner join observations as pp
+        on
+            candidate_block.identity_run_key = pp.identity_run_key
+            and candidate_block.postcode = pp.postcode
+            and candidate_block.unit_identifier_comparison
+            = pp.unit_identifier_comparison
+            and candidate_block.building_number_designator
+            = pp.building_number_designator
+            and pp.source_dataset = 'PPD'
+            and pp.address_component_method = 'PPD_STRUCTURED_FIELDS'
+    inner join observations as epc
+        on
+            candidate_block.identity_run_key = epc.identity_run_key
+            and candidate_block.postcode = epc.postcode
+            and candidate_block.unit_identifier_comparison
+            = epc.unit_identifier_comparison
+            and candidate_block.building_number_designator
+            = epc.building_number_designator
+            and epc.source_dataset = 'EPC_CERTIFICATE'
+            and epc.address_component_method = 'LIBPOSTAL'
+    inner join enabled_policy as policy
+        on policy.rule_code = 'P04_LIBPOSTAL_UNIT_BUILDING_ROAD'
+    where
+        candidate_block.is_admitted
+        and pp.premise_address_comparison <> epc.premise_address_comparison
+        and contains(
+            concat(' ', epc.road_comparison, ' '),
+            concat(' ', pp.road_comparison, ' ')
+        )
 ),
 
 keyed as (

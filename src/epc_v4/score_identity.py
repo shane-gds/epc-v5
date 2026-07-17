@@ -39,6 +39,28 @@ P02_SQL = (
     "and l.premise_address_comparison = r.premise_address_comparison "
     "and l.postcode <> r.postcode"
 )
+P04_SQL = (
+    "l.postcode = r.postcode "
+    "and l.unit_identifier_comparison = r.unit_identifier_comparison "
+    "and l.building_number_designator = r.building_number_designator "
+    "and l.premise_address_comparison <> r.premise_address_comparison "
+    "and l.address_component_status = 'COMPLETE' "
+    "and r.address_component_status = 'COMPLETE' "
+    "and l.libpostal_candidate_block_status = 'ADMITTED' "
+    "and r.libpostal_candidate_block_status = 'ADMITTED' "
+    "and ((l.source_dataset = 'PPD' "
+    "and l.address_component_method = 'PPD_STRUCTURED_FIELDS' "
+    "and r.source_dataset = 'EPC_CERTIFICATE' "
+    "and r.address_component_method = 'LIBPOSTAL' "
+    "and contains(concat(' ', r.road_comparison, ' '), "
+    "concat(' ', l.road_comparison, ' '))) "
+    "or (r.source_dataset = 'PPD' "
+    "and r.address_component_method = 'PPD_STRUCTURED_FIELDS' "
+    "and l.source_dataset = 'EPC_CERTIFICATE' "
+    "and l.address_component_method = 'LIBPOSTAL' "
+    "and contains(concat(' ', l.road_comparison, ' '), "
+    "concat(' ', r.road_comparison, ' '))))"
+)
 
 
 def _now() -> datetime:
@@ -106,6 +128,7 @@ def create_settings(*, salting_partitions: int, linker_uid: str) -> SettingsCrea
             CustomRule(D01_SQL, salting_partitions=salting_partitions),
             CustomRule(P01_SQL, salting_partitions=salting_partitions),
             CustomRule(P02_SQL, salting_partitions=salting_partitions),
+            CustomRule(P04_SQL, salting_partitions=salting_partitions),
         ],
         probability_two_random_records_match=0.000001,
         retain_matching_columns=False,
@@ -140,6 +163,27 @@ def _create_audit_table(connection: duckdb.DuckDBPyConnection) -> None:
             model_path varchar,
             model_sha256 varchar,
             failure_message varchar
+        )
+        """
+    )
+    connection.execute(
+        """
+        create table if not exists identity.identity_splink_publication (
+            identity_run_key varchar primary key,
+            splink_run_id uuid not null unique,
+            model_sha256 varchar not null,
+            published_at timestamptz not null
+        )
+        """
+    )
+    connection.execute(
+        """
+        create table if not exists identity.identity_splink_publication_event (
+            publication_event_id uuid primary key,
+            identity_run_key varchar not null,
+            splink_run_id uuid not null,
+            model_sha256 varchar not null,
+            published_at timestamptz not null
         )
         """
     )
@@ -284,6 +328,19 @@ def run_national(args: argparse.Namespace) -> uuid.UUID:
     initialize_registry_tables(connection)
 
     identity_run_id, identity_run_key, model_version = _current_identity_run(connection)
+    existing_publication = connection.execute(
+        """
+        select splink_run_id, model_sha256
+        from identity.identity_splink_publication
+        where identity_run_key = ?
+        """,
+        [identity_run_key],
+    ).fetchone()
+    if existing_publication is not None:
+        raise RuntimeError(
+            "The current identity run already has an immutable national Splink publication; "
+            "change the comparison-model version to publish another artifact"
+        )
     benchmark = connection.execute(
         """
         select splink_run_id
@@ -473,21 +530,39 @@ def run_national(args: argparse.Namespace) -> uuid.UUID:
                     "National score publication closure failed: "
                     f"expected {expected_count:,}, inserted {inserted_count:,}"
                 )
+            completed_at = _now()
+            connection.execute(
+                """
+                update identity.identity_splink_run
+                set completed_at = ?, run_status = 'SUCCEEDED',
+                    expected_candidate_count = ?, scored_candidate_count = ?
+                where splink_run_id = ?
+                """,
+                [completed_at, expected_count, inserted_count, splink_run_id],
+            )
+            connection.execute(
+                """
+                insert into identity.identity_splink_publication
+                values (?, ?, ?, ?)
+                """,
+                [identity_run_key, splink_run_id, model_sha256, completed_at],
+            )
+            connection.execute(
+                """
+                insert into identity.identity_splink_publication_event
+                values (?, ?, ?, ?, ?)
+                """,
+                [uuid.uuid4(), identity_run_key, splink_run_id, model_sha256, completed_at],
+            )
             connection.execute("commit")
         except Exception:
             connection.execute("rollback")
             raise
 
-        connection.execute(
-            """
-            update identity.identity_splink_run
-            set completed_at = ?, run_status = 'SUCCEEDED',
-                expected_candidate_count = ?, scored_candidate_count = ?
-            where splink_run_id = ?
-            """,
-            [_now(), expected_count, inserted_count, splink_run_id],
-        )
-        linker.table_management.delete_tables_created_by_splink_from_db()
+        try:
+            linker.table_management.delete_tables_created_by_splink_from_db()
+        except Exception as cleanup_error:  # pragma: no cover - cleanup is non-authoritative
+            LOGGER.warning("Splink scratch cleanup failed after publication: %s", cleanup_error)
         LOGGER.info(
             "National run %s persisted %s scores",
             splink_run_id,
@@ -528,6 +603,9 @@ def run_benchmark(args: argparse.Namespace) -> uuid.UUID:
         f"1, 2) <= '{args.sample_hex_max}' or "
         "substr(sha256(concat_ws(':', 'P02', postcode_sector, "
         f"premise_address_comparison)), 1, 2) <= '{args.sample_hex_max}' or "
+        "substr(sha256(concat_ws(':', 'P04', postcode, unit_identifier_comparison, "
+        "building_number_designator)), "
+        f"1, 2) <= '{args.sample_hex_max}' or "
         "(source_dataset = 'EPC_CERTIFICATE' and uprn is not null and "
         f"substr(sha256(concat('D01:', uprn)), 1, 2) <= '{args.sample_hex_max}')"
     )

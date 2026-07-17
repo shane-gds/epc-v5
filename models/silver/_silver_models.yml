@@ -1,8 +1,44 @@
 version: 2
 
 models:
+  - name: int_epc_address_libpostal_route
+    description: |
+      [Station 2 (The Scrubbing Station)]
+      Selects only EPC observations whose address evidence exhibits the multi-number flat
+      trap. There is one row per routed EPC source record, with exact lineage and the
+      versioned parser input sent to the pinned libpostal runtime.
+
+      Explicit unit markers or a flat/maisonette property type must accompany at least two
+      numeric designators. Ordinary addresses are not routed. Selection is not a match,
+      correction, or inferred unit/building assignment.
+    columns:
+      - name: route_selection_key
+        data_tests: [not_null, unique]
+      - name: source_record_key
+        data_tests: [not_null, unique]
+      - name: parser_input_key
+        data_tests: [not_null]
+      - name: selection_reason
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [EXPLICIT_UNIT_MULTI_NUMBER, FLAT_PROPERTY_MULTI_NUMBER]
+
+  - name: int_epc_address_libpostal_route_manifest
+    description: |
+      [Station 2 (The Scrubbing Station)]
+      Fingerprints the complete current selective parser route. There is exactly one row
+      containing the selector and input contracts, routed counts, and an order-independent
+      population key used to bind parser evidence to an identity run.
+    columns:
+      - name: route_population_fingerprint
+        data_tests: [not_null, unique]
+      - name: routed_observation_count
+        data_tests: [not_null]
+
   - name: stg_pp_transaction_observation
     description: |
+      [Station 2 (The Scrubbing Station)]
       Turns accepted HM Land Registry Price Paid Data rows into clean, typed transaction
       observations while keeping the lineage needed to trace every value back to Bronze.
 
@@ -34,6 +70,7 @@ models:
 
   - name: stg_epc_certificate_observation
     description: |
+      [Station 2 (The Scrubbing Station)]
       Turns accepted domestic EPC source rows into typed certificate observations. Dates,
       ratings, scores, addresses, UPRNs, and building descriptions are prepared once while
       retaining complete source lineage.
@@ -71,6 +108,7 @@ models:
 
   - name: stg_epc_recommendation_observation
     description: |
+      [Station 2 (The Scrubbing Station)]
       Prepares EPC recommendation rows for item-level facts, future measure mapping, and
       certificate summaries. It keeps the original wording and cautiously extracts only
       supported GBP cost ranges or single values.
@@ -114,6 +152,7 @@ models:
 
   - name: stg_onsud_uprn_allocation
     description: |
+      [Station 2 (The Scrubbing Station)]
       Creates a narrow, typed, release-aware view of ONSUD UPRN allocations, including
       postcodes, British National Grid coordinates, and selected geography codes.
 
@@ -149,6 +188,7 @@ models:
 
   - name: stg_lad_name_code_reference
     description: |
+      [Station 2 (The Scrubbing Station)]
       Prepares the published Local Authority District names-and-codes file as release-aware
       reference evidence. Official codes, English names, supplied Welsh names, and source
       lineage are retained.
@@ -177,6 +217,7 @@ models:
 
   - name: stg_lpa_name_code_reference
     description: |
+      [Station 2 (The Scrubbing Station)]
       Prepares the published Local Planning Authority names-and-codes file as release-aware
       reference evidence. It standardises codes and names, interprets valid co-terminous
       flags, and keeps complete source lineage.

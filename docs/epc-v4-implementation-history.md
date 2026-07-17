@@ -488,6 +488,42 @@ excessive. Parser results may support candidate generation and comparison featur
 after manual labels confirm precision and blocking recall under a new versioned identity
 run.
 
+### IMP-036: Activate selective libpostal candidate rescue without automatic promotion
+
+**Status:** Accepted by explicit design approval on 17 July 2026; supersedes the
+candidate-generation restriction in IMP-035 while retaining its promotion safeguards.
+
+libpostal is an active parser only for the versioned Silver flat-trap route. The selector
+requires a valid postcode, at least two numeric designators, and either an explicit unit
+marker or a flat/maisonette property type. PPD continues to use supplied SAON, PAON and
+street fields; neither source address is rewritten.
+
+The parser run, route population, native runtime, Python extension, model data and exact
+implementation bytes are part of the identity-run contract. Parser errors fail the run.
+The only new candidate rule requires exact postcode, unit and complete building-number
+designator plus one-way whole-token compatible road evidence. Exact component blocks over
+20 observations on either side or 100 possible pairs are retained as suppressed audit
+evidence. Candidate admission remains uncalibrated review evidence and cannot create an
+accepted edge, assignment confidence or registry UUID.
+
+Current parser and national Splink executions are selected through explicit publication
+pointers, not completion timestamps. A national Splink publication is immutable per identity
+run; changing its model artifact requires a new comparison-model version and identity run.
+
+### IMP-037: Use the six-station factory as the mandatory human navigation layer
+
+**Status:** Accepted
+
+Every dbt model description begins with one exact Station label. Stations communicate sequence
+and responsibility independently of physical schema names, while the existing grain, lineage,
+evidence and publication contracts remain authoritative. A repository test fails when a SQL
+model is undocumented or its description does not start with an approved Station label.
+
+The factory description distinguishes current behavior from planned capability. Deterministic
+UK-specific parsing, embedding/cosine features, accepted multi-record clusters and Golden
+Property registry UUIDs must not be described as implemented until their governed contracts
+and validation evidence exist.
+
 ## 6. Validation evidence
 
 The latest completed pre-Phase-2 validation on 15 July 2026 produced:
@@ -1036,6 +1072,63 @@ The following sequence is active. This section will be updated as work progresse
   UK-specific component parser, and manually label the recovered and failure strata before
   enabling a new blocking or Splink comparison policy.
 
+### 2026-07-17 11:55 UTC: Selective libpostal activated for candidate generation
+
+- Added Silver models `int_epc_address_libpostal_route` and
+  `int_epc_address_libpostal_route_manifest` at one routed EPC source record and one current
+  route population respectively. Ordinary EPC addresses are not sent to libpostal.
+- Extracted shared component and pinned-runtime contracts from the benchmark module. The
+  active parser streams distinct inputs in configurable 5,000-row batches with one DuckDB
+  thread and a 4 GB DuckDB memory limit.
+- Added versioned parser-run manifests and append-only attempt, request and result evidence.
+  Results retain ordered
+  raw components, grouped components, canonical unit/building/road fields and explicit
+  complete/incomplete/error states. Identical parser inputs are parsed once and bridged back
+  to every selected source record.
+- Parser errors are attempt evidence rather than cached results, so a deterministic rerun can
+  retry missing outcomes. Route rows are independently fingerprinted again by the parser before
+  either a new or existing successful run can be published.
+- Bound successful zero-error parser closure, route fingerprint, runtime artifact key and
+  implementation checksum into `identity_input_v3`. A missing, stale, incomplete or failed
+  parser run cannot define the new current identity run.
+- Added active blocking policy `identity_blocking_libpostal_v2` and comparison contract
+  `splink_benchmark_v2`. Rule `P04_LIBPOSTAL_UNIT_BUILDING_ROAD` is implemented identically
+  in dbt and Splink and cannot overlap exact-premise or postcode-change rules.
+- Added `identity_libpostal_candidate_block_profile` so exact postcode/unit/building blocks
+  exceeding side or pair-product limits are suppressed before the compatible-road join and
+  remain auditable.
+- Added `make libpostal-parse` for selective parse preparation and
+  `make identity-candidates` for ordered route, parse, seed and candidate materialisation.
+- Added a fail-closed hypothesis publication gate: current candidate and decision counts
+  and exact candidate keys must reconcile one-to-one before singleton/review hypotheses or
+  assignments can advance. Current scores and decisions are scoped to one immutable, explicitly
+  published national Splink artifact.
+- Production data was not materialised during implementation: doing so would create a new
+  54.9-million-row identity-run population and requires the normal bounded operational
+  window. Validation used unit/integration fixtures, static dbt parsing and SQL linting.
+- Final code validation at 12:34 UTC passed 33 of 33 Python tests, Ruff, SQLFluff across all
+  models/macros, dbt parse, diff whitespace checks and a dry run of the bounded Make
+  orchestration. Production dbt data tests remain intentionally unexecuted until the new
+  parser and identity population are materialised in an operational window.
+
+### 2026-07-17 13:48 UTC: Six-station model navigation contract
+
+- Added the human-facing six-station factory map to the authoritative design. It maps logical
+  pipeline responsibilities onto the existing schemas without changing model grain or DAG
+  dependencies.
+- Added the exact Station label as the first line of all 50 dbt model descriptions: 12 Station
+  2 models, 16 Station 3 models, 6 Station 4 models, 8 Station 5 models and 8 Station 6 models.
+  Station 1 currently has no dbt models because raw landing relations are externally managed
+  sources.
+- Added `tests/test_model_station_documentation.py`, which reconciles documented names against
+  every model SQL file and rejects a missing or misplaced Station label.
+- Documented deterministic UK parsing, vector/cosine scoring, accepted multi-record clusters
+  and Golden Property UUIDs as future capabilities rather than current implementation facts.
+- Marked the `zz_extra_bits` factory note as historical brainstorming so engineers start from
+  the governed design instead of stale claims.
+- Validation passed 34 of 34 Python tests, Ruff, SQLFluff for all models/macros, dbt parse and
+  diff whitespace checks.
+
 ## 9. Open decisions and governance dependencies
 
 - Official retrieval dates and licensing terms for copied legacy PPD/EPC/ONSUD and
@@ -1045,6 +1138,6 @@ The following sequence is active. This section will be updated as work progresse
 - Manual-review workflow and persistence contract.
 - Registry continuity rules when later identity runs split or merge prior clusters.
 - Premises-candidate to building/dwelling promotion criteria.
-- Whether a labelled benchmark justifies libpostal-backed component features in the next
-  identity input and comparison contracts.
+- Calibration and monitored recall/precision for libpostal-rescued candidates before any
+  parser-derived decision policy can accept an edge.
 - Publication/disclosure policy for precise coordinates and graph exports.
