@@ -34,6 +34,9 @@ graph = [
 parquet = [
   "pyarrow>=18.0,<24.0",
 ]
+address-benchmark = [
+  "postal @ git+https://github.com/openvenues/pypostal.git@d6666a4f6a2ae0e7b83e037a35412f0f6b45c318",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

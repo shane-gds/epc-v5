@@ -473,6 +473,21 @@ close prior current intervals before publishing new outcomes. Reactivating a his
 deterministic run key fails closed until a unique execution-manifest contract exists;
 otherwise an `A -> B -> A` sequence could corrupt validity history.
 
+### IMP-035: Keep libpostal as versioned shadow parsing evidence
+
+**Status:** Accepted
+
+libpostal may provide useful unit, number-designator and road components for messy EPC
+addresses, but it does not replace source fields, PPD PAON/SAON, identity decisions or
+registry evidence. Benchmark outputs remain outside production dbt models and carry the
+selected-sample, implementation, native-library, Python-extension and model-data checksums.
+
+Any future candidate rule for multi-unit addresses must require unit and building-number
+evidence together. Building-only rules are prohibited because benchmark fan-out is
+excessive. Parser results may support candidate generation and comparison features only
+after manual labels confirm precision and blocking recall under a new versioned identity
+run.
+
 ## 6. Validation evidence
 
 The latest completed pre-Phase-2 validation on 15 July 2026 produced:
@@ -516,6 +531,9 @@ The completed Phase 2 identity checkpoint later on 15 July 2026 produced:
   endpoint, temporal, semantic, lifecycle-fixture and no-promotion gates.
 - Assignment incremental idempotency confirmed by unchanged row count, assignment time
   and order-independent key checksum.
+- 28 of 28 Python tests passing after the hardened libpostal shadow-benchmark tooling.
+- The immutable 10,000-row libpostal benchmark completed with zero parser errors and no
+  production identity-table changes.
 
 ## 7. Active Phase 2 plan
 
@@ -954,6 +972,70 @@ The following sequence is active. This section will be updated as work progresse
 - Manual labels and calibrated policy approval remain the blocker for accepted edges,
   registry UUID promotion, subject assertions and entity-level location/history models.
 
+### 2026-07-17 09:55 UTC: Pinned libpostal shadow benchmark
+
+- Installed native libpostal commit
+  `25099c506612b34b23b1bfe286ca6321fcf06f35` and pypostal commit
+  `d6666a4f6a2ae0e7b83e037a35412f0f6b45c318` (`postal` 1.1.11) for a
+  read-only benchmark. No production identity table or run contract changed.
+- The default model data is 1,979,250,198 bytes with SHA-256
+  `276a18fd0b37acafbffb2bfe0cf71ad256d8d606ddf27efd25cdddab769fd7cc`.
+  The installed native library and Python extensions also have verified checksums in the
+  local install manifest.
+- Early exploratory benchmark contracts were superseded after review found ambiguous
+  first-token range comparisons, unsafe reverse road containment, incomplete resource
+  accounting and insufficient execution provenance.
+- Final immutable benchmark
+  `95995bfbe7f2fc325a75f3be5d57124386eaa149f9fbf31e2efb2cc9c1951963`
+  used 10,000 deterministic rows from a 444,730-observation weak-label stratum. The stratum
+  requires explicit unit-first ordering, same postcode, PPD SAON/PAON token alignment and
+  PPD street evidence; numeric unit ranges are excluded. Results must not be generalised
+  to all EPC addresses and are not manual truth labels.
+- Component results:
+
+| Metric | Count | Rate |
+|---|---:|---:|
+| Parser errors | 0 | 0.00% |
+| Full unit/SAON designator recovered | 9,654 | 96.54% |
+| Full house-number/range designator recovered | 9,255 | 92.55% |
+| Full PAON reconstructed | 7,287 | 72.87% |
+| Both number roles recovered | 9,013 | 90.13% |
+| Number-role swaps | 0 | 0.00% |
+| Exact road recovered | 6,781 | 67.81% |
+| Safe compatible road recovered | 9,880 | 98.80% |
+| Both roles plus compatible road | 8,967 | 89.67% |
+
+- The parser omitted a house number in 567 rows and a unit in 210. A further 178 emitted
+  house-number designators and 136 emitted unit designators disagreed with weak PPD labels.
+  Full PAON recovery is lower because PPD commonly combines a building name and number
+  while libpostal may split the name into `house` or absorb it into `road`.
+- Candidate fan-out confirms that unit evidence is essential:
+
+| Candidate rule on 9,199 component-complete rows | Total pairs | Median | P90 | P99 | Maximum |
+|---|---:|---:|---:|---:|---:|
+| Exact road + building only | 348,430 | 22 | 104 | 188 | 335 |
+| Compatible road + building only | 505,947 | 41 | 118 | 202 | 586 |
+| Exact road + unit + building | 12,528 | 1 | 3 | 5 | 8 |
+| Compatible road + unit + building | 16,756 | 1 | 3 | 5 | 10 |
+
+- Fan-out counts PPD transaction-observation pairs, not distinct premises. The comparison
+  cohort requires libpostal to emit house-number, unit and road components, so the
+  building-only excess measures unit suppression without mixing in unit-parser failures.
+- Parsing throughput was approximately 8,398 rows per second. Parser/model load took
+  2.63 seconds and parser-loop RSS was approximately 2.15 GB. Whole-run RSS, including
+  DuckDB sample extraction and national PPD fan-out checks, peaked at approximately
+  8.32 GB. The complete benchmark finished in 63.65 seconds without material spill.
+- Six synthetic edge cases recovered both number roles in five cases and strict
+  unit/building/road evidence in four. `Unit 2, Building 5, 11 High Street` did not receive
+  a libpostal unit label, demonstrating why deterministic UK rules and explicit parse
+  statuses remain necessary.
+- The selected sample, implementation files, native library, Python extensions, model
+  data and output CSVs have checksums. Output directories are immutable and classified
+  `RESTRICTED_IDENTITY_REVIEW` because they contain source addresses.
+- Recommendation: retain libpostal as an optional shadow parser, add a deterministic
+  UK-specific component parser, and manually label the recovered and failure strata before
+  enabling a new blocking or Splink comparison policy.
+
 ## 9. Open decisions and governance dependencies
 
 - Official retrieval dates and licensing terms for copied legacy PPD/EPC/ONSUD and
@@ -963,4 +1045,6 @@ The following sequence is active. This section will be updated as work progresse
 - Manual-review workflow and persistence contract.
 - Registry continuity rules when later identity runs split or merge prior clusters.
 - Premises-candidate to building/dwelling promotion criteria.
+- Whether a labelled benchmark justifies libpostal-backed component features in the next
+  identity input and comparison contracts.
 - Publication/disclosure policy for precise coordinates and graph exports.

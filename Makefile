@@ -5,8 +5,9 @@ DBT := .venv/bin/dbt
 
 DB_PATH ?= output/duckdb/epc_v4.duckdb
 DUCKDB_UI_PORT ?= 4214
+LIBPOSTAL_SAMPLE_SIZE ?= 10000
 
-.PHONY: setup install dbt-deps debug test lint format clean ui ui-ssh help
+.PHONY: setup install dbt-deps debug test lint format clean ui ui-ssh help libpostal-setup libpostal-benchmark
 
 setup:
 	python3.12 -m venv .venv
@@ -47,3 +48,9 @@ ui: ## Start DuckDB UI for the project database on the remote machine
 
 ui-ssh: ## Print the SSH tunnel command to run on your laptop
 	DUCKDB_UI_PORT=$(DUCKDB_UI_PORT) ./bin/duckdb-ui-ssh $(DUCKDB_UI_PORT)
+
+libpostal-setup: ## Build the pinned native libpostal benchmark dependencies
+	./scripts/setup_libpostal_benchmark.sh
+
+libpostal-benchmark: ## Run the shadow EPC/PPD libpostal benchmark
+	$(PYTHON) -m epc_v4.benchmark_libpostal --sample-size $(LIBPOSTAL_SAMPLE_SIZE)
