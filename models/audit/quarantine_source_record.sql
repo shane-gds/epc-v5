@@ -257,7 +257,7 @@ failures as (
 events as (
     select
         {{ stable_sha256(
-            'epc-v4.audit.quarantine-source-record',
+            'epc-v5.audit.quarantine-source-record',
             'v1',
             ['source_record_key', 'validation_contract_version', 'rule_code']
         ) }} as quarantine_event_key,

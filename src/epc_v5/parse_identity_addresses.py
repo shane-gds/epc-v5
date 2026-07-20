@@ -15,8 +15,8 @@ from typing import Any
 
 import duckdb
 
-from epc_v4.address_components import parse_address_components
-from epc_v4.libpostal_runtime import (
+from epc_v5.address_components import parse_address_components
+from epc_v5.libpostal_runtime import (
     LIBPOSTAL_COMMIT,
     PYPPOSTAL_COMMIT,
     fingerprint_files,
@@ -24,7 +24,7 @@ from epc_v4.libpostal_runtime import (
     load_libpostal_parser,
     verify_install_manifest,
 )
-from epc_v4.stable_keys import sql_literal, stable_sha256, stable_sha256_sql
+from epc_v5.stable_keys import sql_literal, stable_sha256, stable_sha256_sql
 
 LOGGER = logging.getLogger(__name__)
 SELECTOR_CONTRACT_VERSION = "epc_flat_trap_route_v1"
@@ -34,10 +34,10 @@ PARSER_CONTRACT_VERSION = "libpostal_uk_flat_v1"
 
 @dataclass(frozen=True)
 class SelectiveParseConfig:
-    database_path: Path = Path("output/duckdb/epc_v4.duckdb")
+    database_path: Path = Path("output/duckdb/epc_v5.duckdb")
     library_path: Path = Path.home() / ".local/lib/libpostal.so"
     data_root: Path = Path.home() / ".local/share/libpostal"
-    install_manifest_path: Path = Path.home() / ".local/share/epc-v4-libpostal-install.json"
+    install_manifest_path: Path = Path.home() / ".local/share/epc-v5-libpostal-install.json"
     selector_contract_version: str = SELECTOR_CONTRACT_VERSION
     parser_input_contract_version: str = PARSER_INPUT_CONTRACT_VERSION
     parser_contract_version: str = PARSER_CONTRACT_VERSION
@@ -68,10 +68,10 @@ def _uuid_from_key(key: str) -> uuid.UUID:
 
 def _implementation_sha256(project_root: Path) -> str:
     files = [
-        project_root / "src/epc_v4/address_components.py",
-        project_root / "src/epc_v4/libpostal_runtime.py",
-        project_root / "src/epc_v4/parse_identity_addresses.py",
-        project_root / "src/epc_v4/stable_keys.py",
+        project_root / "src/epc_v5/address_components.py",
+        project_root / "src/epc_v5/libpostal_runtime.py",
+        project_root / "src/epc_v5/parse_identity_addresses.py",
+        project_root / "src/epc_v5/stable_keys.py",
         project_root / "macros/stable_sha256.sql",
         project_root / "models/silver/int_epc_address_libpostal_route.sql",
         project_root / "models/silver/int_epc_address_libpostal_route_manifest.sql",
@@ -83,7 +83,7 @@ def _implementation_sha256(project_root: Path) -> str:
 
 def _runtime_artifact_key(evidence: dict[str, Any]) -> str:
     return stable_sha256(
-        "epc-v4.identity.address-parser-runtime",
+        "epc-v5.identity.address-parser-runtime",
         "v1",
         [
             "libpostal",
@@ -249,7 +249,7 @@ def _route_manifest(
         """
     ).fetchone()
     computed_fingerprint = stable_sha256(
-        "epc-v4.identity.address-parser-route-population",
+        "epc-v5.identity.address-parser-route-population",
         "v1",
         [
             config.selector_contract_version,
@@ -301,7 +301,7 @@ def _insert_requests(
     implementation_sha256: str,
 ) -> None:
     result_key = stable_sha256_sql(
-        "epc-v4.identity.address-parse-result",
+        "epc-v5.identity.address-parse-result",
         "v1",
         [
             "route.parser_input_key",
@@ -311,7 +311,7 @@ def _insert_requests(
         ],
     )
     request_key = stable_sha256_sql(
-        "epc-v4.identity.address-parse-request",
+        "epc-v5.identity.address-parse-request",
         "v1",
         [sql_literal(run_key), "route.route_selection_key"],
     )
@@ -477,7 +477,7 @@ def run_selective_address_parse(
         connection.close()
         raise
     run_key = stable_sha256(
-        "epc-v4.identity.address-parse-run",
+        "epc-v5.identity.address-parse-run",
         "v1",
         [
             route_fingerprint,

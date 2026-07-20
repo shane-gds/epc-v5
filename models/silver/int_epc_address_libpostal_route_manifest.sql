@@ -8,7 +8,7 @@ select
     count(*) as routed_observation_count,
     count(distinct parser_input_key) as distinct_parser_input_count,
     {{ stable_sha256(
-        'epc-v4.identity.address-parser-route-population',
+        'epc-v5.identity.address-parser-route-population',
         'v1',
         [
             "'" ~ var('identity_address_selector_contract_version') ~ "'",

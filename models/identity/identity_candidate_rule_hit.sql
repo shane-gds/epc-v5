@@ -182,7 +182,7 @@ raw_rule_hits as (
 keyed as (
     select
         {{ stable_sha256(
-            'epc-v4.identity.candidate-pair',
+            'epc-v5.identity.candidate-pair',
             'v1',
             ['identity_run_key', 'run_observation_key_l', 'run_observation_key_r']
         ) }} as candidate_pair_key,
@@ -193,7 +193,7 @@ keyed as (
 rule_hits as (
     select
         {{ stable_sha256(
-            'epc-v4.identity.candidate-rule-hit',
+            'epc-v5.identity.candidate-rule-hit',
             'v1',
             ['candidate_pair_key', 'rule_code']
         ) }} as candidate_rule_hit_key,

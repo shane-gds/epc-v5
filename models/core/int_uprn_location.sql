@@ -49,7 +49,7 @@ classified as (
 
 select
     {{ stable_sha256(
-        'epc-v4.location.uprn-location',
+        'epc-v5.location.uprn-location',
         'v1',
         ['onsud_release_key', 'cast(uprn as varchar)']
     ) }} as uprn_location_key,

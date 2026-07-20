@@ -24,7 +24,7 @@ with sector_centroids as (
 
 select
     {{ stable_sha256(
-        'epc-v4.location.postcode-sector-coordinate',
+        'epc-v5.location.postcode-sector-coordinate',
         'v1',
         [
             'onsud_release_key',

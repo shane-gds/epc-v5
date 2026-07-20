@@ -2,7 +2,7 @@
 
 **Status:** Active running record
 **Started:** 15 July 2026
-**Authoritative design:** `docs/epc-v4-data-model-design.md`
+**Authoritative design:** `docs/epc-v5-data-model-design.md`
 
 ## 1. Purpose
 
@@ -61,7 +61,7 @@ Statuses used below:
 - DuckDB and dbt were selected as the analytical system of record. Neo4j remains a
   bounded projection target rather than the primary store.
 - The authoritative design was consolidated in
-  `docs/epc-v4-data-model-design.md` with explicit grains, lineage, key strategies,
+  `docs/epc-v5-data-model-design.md` with explicit grains, lineage, key strategies,
   tests and non-goals.
 - The initial project scaffold established Python 3.12, dbt-duckdb, Splink, spatial
   support, Ruff, SQLFluff and pytest.
@@ -82,7 +82,7 @@ Statuses used below:
 
 ### 4.3 Audited Bronze ingestion
 
-- A bounded source importer was implemented in `src/epc_v4/import_sources.py`.
+- A bounded source importer was implemented in `src/epc_v5/import_sources.py`.
 - ZIP archives are hashed and registered, then processed one member at a time.
 - Each member is extracted, hashed, parsed serially for deterministic source row
   numbering, loaded transactionally, reconciled, checkpointed and deleted before the
@@ -351,7 +351,7 @@ defined.
 Both combined and left-only endpoint aggregation exceeded the 12 GB DuckDB memory limit
 with four execution threads. Running the same left aggregation with one DuckDB thread
 succeeded in 69 seconds without increasing memory. High-cardinality identity aggregation
-commands therefore use `EPC_V4_DUCKDB_THREADS=1`; profile memory and thread limits are
+commands therefore use `EPC_V5_DUCKDB_THREADS=1`; profile memory and thread limits are
 environment-overridable and recorded with execution evidence.
 
 ### IMP-024: Do not infer calibration labels from matching features
@@ -734,7 +734,7 @@ The following sequence is active. This section will be updated as work progresse
 - Made dbt concurrency, DuckDB execution threads, memory and maximum spill size explicit
   environment-controlled profile settings.
 - Rebuilt only `identity_observation_candidate_summary_l` with
-  `EPC_V4_DUCKDB_THREADS=1`; it completed in 69 seconds at the existing 12 GB limit.
+  `EPC_V5_DUCKDB_THREADS=1`; it completed in 69 seconds at the existing 12 GB limit.
 - Combined endpoint summary completed in 41 seconds.
 - National hypothesis materialisation completed in 6 minutes 3 seconds.
 - Current outcomes:

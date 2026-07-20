@@ -22,7 +22,7 @@ scores as (
 decisions as (
     select
         {{ stable_sha256(
-            'epc-v4.identity.match-decision',
+            'epc-v5.identity.match-decision',
             'v1',
             ['score.match_score_key', 'current_run.decision_policy_version']
         ) }} as match_decision_key,

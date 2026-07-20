@@ -42,7 +42,7 @@ classified as (
 
 select
     {{ stable_sha256(
-        'epc-v4.geography.reference-observation',
+        'epc-v5.geography.reference-observation',
         'v1',
         ['release_key', "'LPA'", 'source_record_key']
     ) }} as geography_reference_observation_key,

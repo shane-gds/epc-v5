@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 import duckdb
 import pytest
 
-from epc_v4.calibrate_identity import (
+from epc_v5.calibrate_identity import (
     _sample_key,
     evaluate_labels,
     initialize_calibration_tables,

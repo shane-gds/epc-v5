@@ -4,23 +4,23 @@ import argparse
 import logging
 from pathlib import Path
 
-from epc_v4 import __version__
-from epc_v4.import_sources import (
+from epc_v5 import __version__
+from epc_v5.import_sources import (
     default_config_path,
     import_status,
     load_settings,
     publish_silver_reconciliation,
     run_import,
 )
-from epc_v4.parse_identity_addresses import (
+from epc_v5.parse_identity_addresses import (
     SelectiveParseConfig,
     run_selective_address_parse,
 )
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="epc-v4")
-    parser.add_argument("--version", action="version", version=f"epc-v4 {__version__}")
+    parser = argparse.ArgumentParser(prog="epc-v5")
+    parser.add_argument("--version", action="version", version=f"epc-v5 {__version__}")
     subparsers = parser.add_subparsers(dest="command")
 
     import_parser = subparsers.add_parser(
@@ -55,7 +55,7 @@ def main() -> None:
         help="Parse the current selective EPC flat-trap route",
     )
     address_parser.add_argument(
-        "--database", type=Path, default=Path("output/duckdb/epc_v4.duckdb")
+        "--database", type=Path, default=Path("output/duckdb/epc_v5.duckdb")
     )
     address_parser.add_argument(
         "--library", type=Path, default=Path.home() / ".local/lib/libpostal.so"
@@ -66,7 +66,7 @@ def main() -> None:
     address_parser.add_argument(
         "--install-manifest",
         type=Path,
-        default=Path.home() / ".local/share/epc-v4-libpostal-install.json",
+        default=Path.home() / ".local/share/epc-v5-libpostal-install.json",
     )
     address_parser.add_argument("--batch-size", type=int, default=5_000)
     address_parser.add_argument("--threads", type=int, default=1)
@@ -116,7 +116,7 @@ def main() -> None:
         )
         print(summary.address_parse_run_key)
     else:
-        print(f"epc-v4 {__version__}")
+        print(f"epc-v5 {__version__}")
 
 
 if __name__ == "__main__":

@@ -42,7 +42,7 @@ with observations as (
 
 select
     {{ stable_sha256(
-        'epc-v4.geography.reference-profile',
+        'epc-v5.geography.reference-profile',
         'v1',
         ['geography_type', 'geography_code', 'release_key']
     ) }} as geography_reference_profile_key,

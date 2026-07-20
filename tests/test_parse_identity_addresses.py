@@ -7,14 +7,14 @@ from pathlib import Path
 import duckdb
 import pytest
 
-from epc_v4.address_components import parse_address_components
-from epc_v4.parse_identity_addresses import (
+from epc_v5.address_components import parse_address_components
+from epc_v5.parse_identity_addresses import (
     PARSER_INPUT_CONTRACT_VERSION,
     SELECTOR_CONTRACT_VERSION,
     SelectiveParseConfig,
     run_selective_address_parse,
 )
-from epc_v4.stable_keys import stable_sha256
+from epc_v5.stable_keys import stable_sha256
 
 
 def _fake_parser(_: str) -> list[tuple[str, str]]:
@@ -55,7 +55,7 @@ def _create_route_fixture(tmp_path) -> tuple[Path, SelectiveParseConfig, dict[st
             SELECTOR_CONTRACT_VERSION,
             PARSER_INPUT_CONTRACT_VERSION,
             stable_sha256(
-                "epc-v4.identity.address-parser-route-population",
+                "epc-v5.identity.address-parser-route-population",
                 "v1",
                 [
                     SELECTOR_CONTRACT_VERSION,

@@ -65,12 +65,12 @@ scoring_publication_gate as (
 hypotheses as (
     select
         {{ stable_sha256(
-            'epc-v4.identity.hypothesis',
+            'epc-v5.identity.hypothesis',
             'v1',
             ['observation.identity_run_key', 'observation.identity_run_observation_key']
         ) }} as identity_hypothesis_key,
         {{ stable_sha256(
-            'epc-v4.identity.singleton-cluster',
+            'epc-v5.identity.singleton-cluster',
             'v1',
             ['observation.identity_run_key', 'observation.identity_run_observation_key']
         ) }} as identity_cluster_key,

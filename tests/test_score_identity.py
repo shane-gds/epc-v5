@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import duckdb
 
-from epc_v4.score_identity import D01_SQL, P01_SQL, P02_SQL, P04_SQL, create_settings
+from epc_v5.score_identity import D01_SQL, P01_SQL, P02_SQL, P04_SQL, create_settings
 
 
 def test_identity_splink_settings_pin_expected_rules_and_model_status() -> None:

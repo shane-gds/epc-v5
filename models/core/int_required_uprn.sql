@@ -26,7 +26,7 @@ required_from_epc as (
 
 select
     {{ stable_sha256(
-        'epc-v4.location.required-uprn',
+        'epc-v5.location.required-uprn',
         'v1',
         [
             'onsud_release.release_key',

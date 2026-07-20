@@ -2,7 +2,7 @@
 
 **Handoff date:** 14 July 2026
 **Previous workspace:** `/home/shamus/dev/epc-v3`
-**Current project:** `/home/shamus/dev/epc-v4`
+**Current project:** `/home/shamus/dev/epc-v5`
 
 ## Mission
 
@@ -17,7 +17,7 @@ The guiding principle is:
 Read these before implementing models:
 
 1. `AGENTS.md` — non-negotiable implementation principles.
-2. `docs/epc-v4-data-model-design.md` — authoritative model-by-model specification, narrative, ER diagrams, columns, tests and implementation phases.
+2. `docs/epc-v5-data-model-design.md` — authoritative model-by-model specification, narrative, ER diagrams, columns, tests and implementation phases.
 3. `README.md` — project structure and quick start.
 
 The v4 design document was developed from lessons learned in epc-v3, but v3 model code is **not** the implementation specification.
@@ -50,7 +50,7 @@ Created:
 - Layered `models/` directories.
 - `macros/generate_schema_name.sql`.
 - `macros/stable_sha256.sql`.
-- Python package under `src/epc_v4/`.
+- Python package under `src/epc_v5/`.
 - `README.md`, `AGENTS.md`, `.gitignore`, `.env.example`, `Makefile`.
 - Full v4 design document under `docs/`.
 
@@ -89,7 +89,7 @@ make setup
 Then verify:
 
 ```bash
-.venv/bin/python -m epc_v4
+.venv/bin/python -m epc_v5
 .venv/bin/dbt debug --profiles-dir .
 .venv/bin/dbt parse --profiles-dir .
 .venv/bin/python -m pytest
@@ -112,6 +112,6 @@ Do not begin Splink implementation until source release, file, source-row, busin
 
 Start the new session with:
 
-> Read `AGENTS.md`, `CONTEXT.md`, `README.md`, and the relevant sections of `docs/epc-v4-data-model-design.md`. Continue from the handoff. First verify the scaffold and dependency installation status; do not copy v3 models or data.
+> Read `AGENTS.md`, `CONTEXT.md`, `README.md`, and the relevant sections of `docs/epc-v5-data-model-design.md`. Continue from the handoff. First verify the scaffold and dependency installation status; do not copy v3 models or data.
 
 The full design document is large. Read its overview and the specific model chapter relevant to the current task rather than loading all 3,000+ lines unless a whole-architecture review is needed.

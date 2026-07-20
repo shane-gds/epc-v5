@@ -1,4 +1,4 @@
-database_path: output/duckdb/epc_v4.duckdb
+database_path: output/duckdb/epc_v5.duckdb
 data_root: data/raw/epc project data files
 temp_directory: output/tmp/source_import
 memory_limit: 8GB

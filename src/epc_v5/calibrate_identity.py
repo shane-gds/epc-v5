@@ -13,7 +13,7 @@ from typing import Any
 
 import duckdb
 
-from epc_v4.stable_keys import sql_literal, stable_sha256, stable_sha256_sql
+from epc_v5.stable_keys import sql_literal, stable_sha256, stable_sha256_sql
 
 LOGGER = logging.getLogger(__name__)
 SAMPLE_CONTRACT_VERSION = "identity_calibration_sample_v1"
@@ -187,7 +187,7 @@ def _sample_key(
     hash_prefix_max: str,
 ) -> str:
     return stable_sha256(
-        "epc-v4.identity.calibration-sample",
+        "epc-v5.identity.calibration-sample",
         "v1",
         [
             identity_run_key,
@@ -377,7 +377,7 @@ def create_sample(
             end
         """
         sample_row_key_sql = stable_sha256_sql(
-            "epc-v4.identity.calibration-sample-row",
+            "epc-v5.identity.calibration-sample-row",
             "v1",
             [sql_literal(sample_key), "candidate_pair_key"],
         )
@@ -633,7 +633,7 @@ def evaluate_labels(connection: duckdb.DuckDBPyConnection, minimum_labels: int) 
         [label_rows[0][2]],
     ).fetchone()[0]
     label_snapshot = stable_sha256(
-        "epc-v4.identity.label-snapshot",
+        "epc-v5.identity.label-snapshot",
         "v1",
         [str(row[7]) for row in label_rows],
     )
@@ -689,7 +689,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--database",
         type=Path,
-        default=Path("output/duckdb/epc_v4.duckdb"),
+        default=Path("output/duckdb/epc_v5.duckdb"),
     )
     parser.add_argument("--output-root", type=Path, default=Path("output/identity"))
     parser.add_argument("--quota-per-stratum", type=int, default=20)

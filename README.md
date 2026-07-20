@@ -6,7 +6,7 @@ Evidence-first UK property intelligence built with DuckDB, dbt and Splink, with 
 
 > Source records remain evidence. Entity links are versioned assertions. Current state is derived for an as-of date. Policy outputs are cautious, versioned screening results.
 
-The authoritative design is [`docs/epc-v4-data-model-design.md`](docs/epc-v4-data-model-design.md).
+The authoritative design is [`docs/epc-v5-data-model-design.md`](docs/epc-v5-data-model-design.md).
 
 ## Quick start
 

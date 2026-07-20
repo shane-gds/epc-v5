@@ -8,7 +8,7 @@
     {% set canonical_easting = "cast(round(cast(" ~ easting_expression ~ " as double), " ~ scale ~ ") as decimal(12, " ~ scale ~ "))" %}
     {% set canonical_northing = "cast(round(cast(" ~ northing_expression ~ " as double), " ~ scale ~ ") as decimal(12, " ~ scale ~ "))" %}
     {{ stable_sha256(
-        'epc-v4.location.coordinate-pair',
+        'epc-v5.location.coordinate-pair',
         'v3',
         [
             "'" ~ var('coordinate_source_crs') ~ "'",

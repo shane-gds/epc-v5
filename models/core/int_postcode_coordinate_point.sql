@@ -14,7 +14,7 @@ with selected_onsud_release as (
 
 select
     {{ stable_sha256(
-        'epc-v4.location.postcode-coordinate-point',
+        'epc-v5.location.postcode-coordinate-point',
         'v1',
         [
             'onsud_release.release_key',

@@ -2,7 +2,7 @@
 
 select
     {{ stable_sha256(
-        'epc-v4.identity.target-alternative',
+        'epc-v5.identity.target-alternative',
         'v1',
         [
             'coalesce(left_alternative.identity_run_key, right_alternative.identity_run_key)',

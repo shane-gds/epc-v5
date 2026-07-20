@@ -7,7 +7,7 @@ select
     assignment_method
 from {{ ref('bridge_source_record_entity_assignment') }}
 where assignment_key is distinct from {{ stable_sha256(
-    'epc-v4.identity.source-record-assignment',
+    'epc-v5.identity.source-record-assignment',
     'v1',
     [
         'identity_run_key',

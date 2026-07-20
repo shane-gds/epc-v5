@@ -11,12 +11,12 @@ with current_observations as (
 select
     case
         when source_dataset = 'EPC_CERTIFICATE' and uprn is not null then {{ stable_sha256(
-            'epc-v4.identity.target-hypothesis',
+            'epc-v5.identity.target-hypothesis',
             'v1',
             ['identity_run_key', "'SUPPLIED_UPRN'", 'cast(uprn as varchar)']
         ) }}
         else {{ stable_sha256(
-            'epc-v4.identity.target-hypothesis',
+            'epc-v5.identity.target-hypothesis',
             'v1',
             [
                 'identity_run_key',

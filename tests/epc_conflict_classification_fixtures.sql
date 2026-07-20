@@ -30,7 +30,7 @@ keyed as (
     select
         *,
         {{ stable_sha256(
-            'epc-v4.test.epc-payload',
+            'epc-v5.test.epc-payload',
             'v1',
             ['address', 'floor_area']
         ) }} as payload_hash

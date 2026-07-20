@@ -12,7 +12,7 @@ from typing import Any
 
 LIBPOSTAL_COMMIT = "25099c506612b34b23b1bfe286ca6321fcf06f35"
 PYPPOSTAL_COMMIT = "d6666a4f6a2ae0e7b83e037a35412f0f6b45c318"
-INSTALL_MANIFEST_CONTRACT_VERSION = "epc_v4_libpostal_install_v1"
+INSTALL_MANIFEST_CONTRACT_VERSION = "epc_v5_libpostal_install_v1"
 
 
 def file_sha256(path: Path) -> str:

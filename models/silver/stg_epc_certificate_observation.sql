@@ -17,7 +17,7 @@ with source as (
         {{ try_strict_unsigned_integer('uprn_raw', 'ubigint') }} as uprn_value,
         try_cast(trim(total_floor_area_raw) as decimal(18, 2)) as total_floor_area_value,
         {{ stable_sha256(
-            'epc-v4.silver.epc-certificate-payload',
+            'epc-v5.silver.epc-certificate-payload',
             'v1',
             [
                 'certificate_number_raw',

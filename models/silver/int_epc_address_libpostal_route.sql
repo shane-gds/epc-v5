@@ -65,7 +65,7 @@ keyed as (
     select
         *,
         {{ stable_sha256(
-            'epc-v4.identity.address-parser-input',
+            'epc-v5.identity.address-parser-input',
             'v1',
             [
                 "'" ~ var('identity_libpostal_input_contract_version') ~ "'",
@@ -77,7 +77,7 @@ keyed as (
 
 select
     {{ stable_sha256(
-        'epc-v4.identity.address-parser-route',
+        'epc-v5.identity.address-parser-route',
         'v1',
         [
             "'" ~ var('identity_address_selector_contract_version') ~ "'",

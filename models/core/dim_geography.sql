@@ -2,7 +2,7 @@
 
 select
     {{ stable_sha256(
-        'epc-v4.geography.reference',
+        'epc-v5.geography.reference',
         'v1',
         ['geography_type', 'geography_code', 'release_key']
     ) }} as geography_key,

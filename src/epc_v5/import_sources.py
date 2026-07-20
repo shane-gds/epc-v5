@@ -19,7 +19,7 @@ from typing import Any
 import duckdb
 import yaml
 
-from epc_v4.stable_keys import sql_literal, stable_sha256, stable_sha256_sql
+from epc_v5.stable_keys import sql_literal, stable_sha256, stable_sha256_sql
 
 LOGGER = logging.getLogger(__name__)
 GIB = 1024**3
@@ -309,7 +309,7 @@ def _create_control_tables(connection: duckdb.DuckDBPyConnection) -> None:
         """
     )
     membership_key = stable_sha256_sql(
-        "epc-v4.audit.source-file-container",
+        "epc-v5.audit.source-file-container",
         "v1",
         [
             "cast(parent_source_file_id as varchar)",
@@ -354,7 +354,7 @@ def _register_pipeline_run(
             "min_free_gib": settings.min_free_gib,
         }
     )
-    command = "python -m epc_v4 import-sources --targets " + " ".join(targets)
+    command = "python -m epc_v5 import-sources --targets " + " ".join(targets)
     connection.execute(
         """
         insert into audit.audit_pipeline_run values (?, ?, ?, ?, null, ?, ?, null, null)
@@ -369,7 +369,7 @@ def _register_release(
     source: dict[str, Any],
 ) -> uuid.UUID:
     release_key = stable_sha256(
-        "epc-v4.audit.dataset-release",
+        "epc-v5.audit.dataset-release",
         "v1",
         [source["publisher"], source["dataset_code"], source["release_label"]],
     )
@@ -463,7 +463,7 @@ def _register_container_membership(
     if parent_source_file_id is None:
         return
     membership_key = stable_sha256(
-        "epc-v4.audit.source-file-container",
+        "epc-v5.audit.source-file-container",
         "v1",
         [str(parent_source_file_id), str(child_source_file_id), source_member_path],
     )
@@ -1232,4 +1232,4 @@ def publish_silver_reconciliation(database_path: Path) -> int:
 
 
 def default_config_path() -> Path:
-    return Path(os.environ.get("EPC_V4_IMPORT_CONFIG", "config/source_import.yml"))
+    return Path(os.environ.get("EPC_V5_IMPORT_CONFIG", "config/source_import.yml"))

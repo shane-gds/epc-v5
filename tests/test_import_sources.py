@@ -10,8 +10,8 @@ import duckdb
 import pytest
 import yaml
 
-import epc_v4.import_sources as import_sources
-from epc_v4.import_sources import publish_silver_reconciliation, run_import
+import epc_v5.import_sources as import_sources
+from epc_v5.import_sources import publish_silver_reconciliation, run_import
 
 
 def _source_metadata(dataset_code: str, file_name: str) -> dict[str, object]:

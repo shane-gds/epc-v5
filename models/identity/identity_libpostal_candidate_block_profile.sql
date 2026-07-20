@@ -87,7 +87,7 @@ classified as (
 
 select
     {{ stable_sha256(
-        'epc-v4.identity.libpostal-candidate-block',
+        'epc-v5.identity.libpostal-candidate-block',
         'v1',
         [
             'identity_run_key',

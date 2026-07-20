@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from epc_v4.address_components import (
+from epc_v5.address_components import (
     canonical_role_component,
     combine_parsed_components,
     complete_number_designator,
@@ -11,12 +11,12 @@ from epc_v4.address_components import (
     normalise_component,
     number_designator,
 )
-from epc_v4.benchmark_libpostal import (
+from epc_v5.benchmark_libpostal import (
     create_immutable_output_directory,
     evaluate_parsed_row,
     summarise_results,
 )
-from epc_v4.libpostal_runtime import fingerprint_directory
+from epc_v5.libpostal_runtime import fingerprint_directory
 
 
 def test_component_normalisation_preserves_alphanumeric_numbers() -> None:

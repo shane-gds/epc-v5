@@ -19,7 +19,7 @@ from splink import Linker, SettingsCreator
 from splink.backends.duckdb import DuckDBAPI
 from splink.blocking_rule_library import CustomRule
 
-from epc_v4.stable_keys import sql_literal, stable_sha256_sql
+from epc_v5.stable_keys import sql_literal, stable_sha256_sql
 
 LOGGER = logging.getLogger(__name__)
 
@@ -219,7 +219,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--database",
         type=Path,
-        default=Path("output/duckdb/epc_v4.duckdb"),
+        default=Path("output/duckdb/epc_v5.duckdb"),
     )
     parser.add_argument("--output-root", type=Path, default=Path("output/identity"))
     parser.add_argument("--threads", type=int, default=4)
@@ -424,7 +424,7 @@ def run_national(args: argparse.Namespace) -> uuid.UUID:
             )
 
         score_key_sql = stable_sha256_sql(
-            "epc-v4.identity.match-score",
+            "epc-v5.identity.match-score",
             "v1",
             [
                 "candidate.candidate_pair_key",

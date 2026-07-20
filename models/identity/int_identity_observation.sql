@@ -151,12 +151,12 @@ run_population as (
 
 select
     {{ stable_sha256(
-        'epc-v4.identity.observation',
+        'epc-v5.identity.observation',
         'v1',
         ['source_dataset', 'source_record_key']
     ) }} as identity_observation_key,
     {{ stable_sha256(
-        'epc-v4.identity.run-observation',
+        'epc-v5.identity.run-observation',
         'v1',
         ['identity_run_key', 'source_dataset', 'source_record_key']
     ) }} as identity_run_observation_key,

@@ -18,14 +18,14 @@ import duckdb
 import pandas as pd
 import psutil
 
-from epc_v4.address_components import (
+from epc_v5.address_components import (
     canonical_role_component,
     combine_parsed_components,
     complete_number_designator,
     normalise_component,
     number_designator,
 )
-from epc_v4.libpostal_runtime import (
+from epc_v5.libpostal_runtime import (
     LIBPOSTAL_COMMIT,
     PYPPOSTAL_COMMIT,
     file_sha256,
@@ -34,10 +34,10 @@ from epc_v4.libpostal_runtime import (
     load_libpostal_parser,
     verify_install_manifest,
 )
-from epc_v4.stable_keys import stable_sha256
+from epc_v5.stable_keys import stable_sha256
 
 BENCHMARK_CONTRACT_VERSION = "libpostal_epc_ppd_v6"
-DEFAULT_SAMPLE_SEED = "epc-v4-libpostal-default-v1"
+DEFAULT_SAMPLE_SEED = "epc-v5-libpostal-default-v1"
 
 SYNTHETIC_FIXTURES = (
     {
@@ -688,8 +688,8 @@ def run_benchmark(args: argparse.Namespace) -> Path:
         )
         implementation_files = [
             Path(__file__).resolve(),
-            project_root / "src/epc_v4/address_components.py",
-            project_root / "src/epc_v4/libpostal_runtime.py",
+            project_root / "src/epc_v5/address_components.py",
+            project_root / "src/epc_v5/libpostal_runtime.py",
             project_root / "scripts/setup_libpostal_benchmark.sh",
             project_root / "pyproject.toml",
         ]
@@ -697,7 +697,7 @@ def run_benchmark(args: argparse.Namespace) -> Path:
         git_evidence = git_worktree_evidence(project_root)
         identity_run_key = str(sample["identity_run_key"].iloc[0])
         benchmark_key = stable_sha256(
-            "epc-v4.identity.libpostal-benchmark",
+            "epc-v5.identity.libpostal-benchmark",
             "v2",
             [
                 identity_run_key,
@@ -818,7 +818,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--database",
         type=Path,
-        default=Path("output/duckdb/epc_v4.duckdb"),
+        default=Path("output/duckdb/epc_v5.duckdb"),
     )
     parser.add_argument("--sample-size", type=int, default=10_000)
     parser.add_argument("--sample-seed", default=DEFAULT_SAMPLE_SEED)
@@ -841,7 +841,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--install-manifest",
         type=Path,
-        default=Path.home() / ".local/share/epc-v4-libpostal-install.json",
+        default=Path.home() / ".local/share/epc-v5-libpostal-install.json",
     )
     parser.add_argument("--libpostal-commit", default=LIBPOSTAL_COMMIT)
     parser.add_argument("--pypostal-commit", default=PYPPOSTAL_COMMIT)

@@ -83,7 +83,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--database",
         type=Path,
-        default=Path("output/duckdb/epc_v4.duckdb"),
+        default=Path("output/duckdb/epc_v5.duckdb"),
     )
     parser.add_argument("--memory-limit", default="12GB")
     return parser.parse_args()

@@ -70,7 +70,7 @@ current_run as (
 current_assignments as (
     select
         {{ stable_sha256(
-            'epc-v4.identity.source-record-assignment',
+            'epc-v5.identity.source-record-assignment',
             'v1',
             [
                 'observation.identity_run_key',

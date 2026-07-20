@@ -14,7 +14,7 @@ for command in git autoconf automake libtoolize pkg-config make gcc curl; do
   fi
 done
 
-INSTALL_MANIFEST="$PREFIX/share/epc-v4-libpostal-install.json"
+INSTALL_MANIFEST="$PREFIX/share/epc-v5-libpostal-install.json"
 if [ -f "$INSTALL_MANIFEST" ]; then
   LIBPOSTAL_COMMIT="$LIBPOSTAL_COMMIT" \
   PYPPOSTAL_COMMIT="$PYPPOSTAL_COMMIT" \
@@ -23,13 +23,13 @@ if [ -f "$INSTALL_MANIFEST" ]; then
 import os
 from pathlib import Path
 
-from epc_v4.libpostal_runtime import (
+from epc_v5.libpostal_runtime import (
     installed_artifact_evidence,
     verify_install_manifest,
 )
 
 prefix = Path(os.environ["LIBPOSTAL_PREFIX"])
-manifest_path = prefix / "share/epc-v4-libpostal-install.json"
+manifest_path = prefix / "share/epc-v5-libpostal-install.json"
 actual = installed_artifact_evidence(
     prefix / "lib/libpostal.so",
     prefix / "share/libpostal",
@@ -85,7 +85,7 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
-from epc_v4.libpostal_runtime import installed_artifact_evidence
+from epc_v5.libpostal_runtime import installed_artifact_evidence
 
 prefix = Path(os.environ["LIBPOSTAL_PREFIX"])
 evidence = installed_artifact_evidence(
@@ -94,7 +94,7 @@ evidence = installed_artifact_evidence(
 )
 manifest = {
     **evidence,
-    "manifest_contract_version": "epc_v4_libpostal_install_v1",
+    "manifest_contract_version": "epc_v5_libpostal_install_v1",
     "installed_at": datetime.now(UTC).isoformat(),
     "libpostal_commit": os.environ["LIBPOSTAL_COMMIT"],
     "pypostal_commit": os.environ["PYPPOSTAL_COMMIT"],
@@ -109,7 +109,7 @@ manifest = {
         f"--datadir={prefix / 'share'}",
     ],
 }
-manifest_path = prefix / "share/epc-v4-libpostal-install.json"
+manifest_path = prefix / "share/epc-v5-libpostal-install.json"
 manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 print(manifest_path)
 PY

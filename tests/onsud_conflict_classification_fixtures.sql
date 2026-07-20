@@ -35,7 +35,7 @@ keyed as (
     select
         *,
         {{ stable_sha256(
-            'epc-v4.test.onsud-allocation',
+            'epc-v5.test.onsud-allocation',
             'v1',
             ['release_key', 'cast(uprn as varchar)', 'postcode', 'cast(easting as varchar)']
         ) }} as allocation_key

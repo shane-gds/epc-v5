@@ -3,7 +3,7 @@ PYTHON := .venv/bin/python
 PIP := .venv/bin/pip
 DBT := .venv/bin/dbt
 
-DB_PATH ?= output/duckdb/epc_v4.duckdb
+DB_PATH ?= output/duckdb/epc_v5.duckdb
 DUCKDB_UI_PORT ?= 4214
 LIBPOSTAL_SAMPLE_SIZE ?= 10000
 LIBPOSTAL_BATCH_SIZE ?= 5000
@@ -54,23 +54,23 @@ libpostal-setup: ## Build the pinned native libpostal runtime
 	./scripts/setup_libpostal_benchmark.sh
 
 libpostal-benchmark: ## Run the shadow EPC/PPD libpostal benchmark
-	$(PYTHON) -m epc_v4.benchmark_libpostal --database $(DB_PATH) \
+	$(PYTHON) -m epc_v5.benchmark_libpostal --database $(DB_PATH) \
 		--sample-size $(LIBPOSTAL_SAMPLE_SIZE)
 
 libpostal-parse: ## Select and parse only current flat-trap EPC addresses
-	EPC_V4_DUCKDB_PATH=$(DB_PATH) $(DBT) run --profiles-dir . --select \
+	EPC_V5_DUCKDB_PATH=$(DB_PATH) $(DBT) run --profiles-dir . --select \
 		int_epc_address_libpostal_route int_epc_address_libpostal_route_manifest
-	$(PYTHON) -m epc_v4 parse-identity-addresses --database $(DB_PATH) --batch-size $(LIBPOSTAL_BATCH_SIZE)
+	$(PYTHON) -m epc_v5 parse-identity-addresses --database $(DB_PATH) --batch-size $(LIBPOSTAL_BATCH_SIZE)
 
 identity-candidates: libpostal-parse ## Build current identity inputs and strict candidates
-	EPC_V4_DUCKDB_PATH=$(DB_PATH) $(DBT) seed --profiles-dir . \
+	EPC_V5_DUCKDB_PATH=$(DB_PATH) $(DBT) seed --profiles-dir . \
 		--select identity_blocking_policy
-	EPC_V4_DUCKDB_PATH=$(DB_PATH) $(DBT) run --profiles-dir . --select \
+	EPC_V5_DUCKDB_PATH=$(DB_PATH) $(DBT) run --profiles-dir . --select \
 		int_identity_current_run identity_run_manifest int_identity_address_parse \
 		int_identity_observation identity_libpostal_candidate_block_profile \
 		identity_scoring_input identity_candidate_rule_hit identity_candidate_pair \
 		identity_candidate_generation_audit
-	EPC_V4_DUCKDB_PATH=$(DB_PATH) $(DBT) test --indirect-selection cautious \
+	EPC_V5_DUCKDB_PATH=$(DB_PATH) $(DBT) test --indirect-selection cautious \
 		--profiles-dir . --select \
 		int_epc_address_libpostal_route int_epc_address_libpostal_route_manifest \
 		int_identity_address_parse int_identity_observation \

@@ -1,8 +1,8 @@
-name: epc_v4
+name: epc_v5
 version: 4.0.0
 config-version: 2
 
-profile: epc_v4
+profile: epc_v5
 require-dbt-version: [">=1.10.0", "<2.0.0"]
 
 model-paths: ["models"]
@@ -37,7 +37,7 @@ vars:
   lpa_reference_release_label: MAY_2025
 
 models:
-  epc_v4:
+  epc_v5:
     audit:
       +schema: audit
       +materialized: table
@@ -72,6 +72,6 @@ models:
       +tags: [graph_export]
 
 seeds:
-  epc_v4:
+  epc_v5:
     +schema: reference
     +quote_columns: false

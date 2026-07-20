@@ -104,7 +104,7 @@ with metrics as (
 
 select
     {{ stable_sha256(
-        'epc-v4.audit.silver-quality-metric',
+        'epc-v5.audit.silver-quality-metric',
         'v1',
         ['source_dataset', 'metric_name']
     ) }} as quality_metric_key,

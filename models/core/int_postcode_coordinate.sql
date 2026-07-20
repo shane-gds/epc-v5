@@ -28,7 +28,7 @@ with centroids as (
 
 select
     {{ stable_sha256(
-        'epc-v4.location.postcode-coordinate',
+        'epc-v5.location.postcode-coordinate',
         'v1',
         ['onsud_release_key', 'postcode', "'POSTCODE_CENTROID'", "'BOUNDING_BOX_DIAGONAL'"]
     ) }} as postcode_coordinate_key,

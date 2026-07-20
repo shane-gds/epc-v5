@@ -1,6 +1,6 @@
 # EPC v4 implementation guidance
 
-Read `docs/epc-v4-data-model-design.md` before implementing any model.
+Read `docs/epc-v5-data-model-design.md` before implementing any model.
 
 ## Non-negotiable principles
 
