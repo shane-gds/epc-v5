@@ -1,4 +1,4 @@
-# EPC v4 implementation and decision history
+# EPC v5 implementation and decision history
 
 **Status:** Active running record
 **Started:** 15 July 2026
@@ -7,7 +7,7 @@
 ## 1. Purpose
 
 This document records implementation steps, material choices, validation evidence,
-operational constraints and unresolved decisions as EPC v4 is built. It is intended to
+operational constraints and unresolved decisions as EPC v5 is built. It is intended to
 preserve the reasoning needed for later formal documentation and architecture decision
 records.
 
@@ -33,7 +33,7 @@ Statuses used below:
 
 | Area | Current state | Evidence |
 |---|---|---|
-| Source control | Private GitHub repository on `main` | Latest pushed commit `a8f6fe5` |
+| Source control | Private GitHub repository on `main` | Local maintenance changes remain reviewable before commit |
 | Audit and Bronze | Complete for current source and geography-reference inputs | 44 leaf files reconciled |
 | Silver | Source observations, allocations and geography references complete | 183,756,030 accepted rows |
 | Quarantine | Append-only fatal-rule evidence | 11 EPC source rows |
@@ -41,11 +41,11 @@ Statuses used below:
 | Location input | Explicit ONSUD `DEC_2025` required-UPRN outcomes | 17,929,367 UPRNs |
 | Coordinate cache | Distinct BNG pairs transformed once to WGS84 | 16,264,097 pairs |
 | Geography reference | Release-aware LAD and LPA endpoints complete | 743 geography rows |
-| Identity candidates | Complete for current benchmark policy | 26,301,482 pairs |
-| Identity scoring | Complete, explicitly uncalibrated | 26,301,482 Splink scores |
+| Identity candidates | Complete for current selective-libpostal policy | 27,678,200 pairs |
+| Identity scoring | Complete, explicitly uncalibrated | 27,678,200 national Splink scores |
 | Identity outcomes | Review decisions and singleton/unresolved closure complete | 54,869,297 hypotheses |
 | Assignment ledger | Explicit unresolved source-record outcomes complete | 54,869,297 assignments |
-| Calibration | Deterministic sample ready; explicit labels pending | 1,104 blank-label rows |
+| Calibration | Deterministic sample ready; explicit labels pending | 1,559 blank-label rows |
 | Core atomic facts | Sale, EPC and recommendation facts complete | 142,368,834 facts |
 | Recommendation aggregate | Certificate-grain evidence cache complete | 23,573,781 certificates |
 | Core registries | Persistent foundations empty pending calibrated promotion | 0 promoted entities |
@@ -519,10 +519,10 @@ and responsibility independently of physical schema names, while the existing gr
 evidence and publication contracts remain authoritative. A repository test fails when a SQL
 model is undocumented or its description does not start with an approved Station label.
 
-The factory description distinguishes current behavior from planned capability. Deterministic
-UK-specific parsing, embedding/cosine features, accepted multi-record clusters and Golden
-Property registry UUIDs must not be described as implemented until their governed contracts
-and validation evidence exist.
+The factory description distinguishes current behavior from planned capability. EPC v5
+explicitly excludes embedding/cosine features. Deterministic UK-specific parsing, accepted
+multi-record clusters and Golden Property registry UUIDs must not be described as implemented
+until their governed contracts and validation evidence exist.
 
 ## 6. Validation evidence
 
@@ -1122,12 +1122,42 @@ The following sequence is active. This section will be updated as work progresse
   sources.
 - Added `tests/test_model_station_documentation.py`, which reconciles documented names against
   every model SQL file and rejects a missing or misplaced Station label.
-- Documented deterministic UK parsing, vector/cosine scoring, accepted multi-record clusters
-  and Golden Property UUIDs as future capabilities rather than current implementation facts.
+- Documented deterministic UK parsing, accepted multi-record clusters and Golden Property
+  UUIDs as future capabilities, while explicitly excluding vector/cosine scoring from EPC v5.
 - Marked the `zz_extra_bits` factory note as historical brainstorming so engineers start from
   the governed design instead of stale claims.
 - Validation passed 34 of 34 Python tests, Ruff, SQLFluff for all models/macros, dbt parse and
   diff whitespace checks.
+
+### 2026-07-21 20:47 UTC: Reproducible vector-free v5 closure
+
+- Completed project-facing EPC v4-to-v5 naming without changing stable-key payloads or
+  rewriting the published Splink artifact. Future linker UIDs use `epcv5_`; the successful
+  benchmark's historical `epcv4_` UID and model hash remain immutable evidence.
+- Replaced partial one-off pipeline scripts with a locked `clean-build`/`resume` orchestrator.
+  Resume verifies configured source release, size, SHA-256 and parser contracts, selects only
+  a current-run benchmark artifact with a matching file hash, and skips national scoring only
+  after exact candidate/score closure.
+- Added first-class Make targets for import, Silver, reconciliation, libpostal, candidates,
+  benchmark/national scoring, downstream identity, core, calibration and bounded validation.
+  Baseline resources are one dbt thread, one DuckDB thread, 8GB memory and 120GB spill.
+- Materialised the four previously missing relations: the ONSUD source-record bridge,
+  quarantine, Silver quality profile and source-file Silver reconciliation. All 50 dbt model
+  relations now exist; 44 leaf source files published with `PASSED` reconciliation.
+- Rewrote candidate endpoint closure as one left/right endpoint union and one anti-join. It
+  passed in both the 45-test candidate group and the full 135-test identity group at the normal
+  8GB memory limit.
+- Corrected the coordinate fixture hash left stale by the original `epc-v4` to `epc-v5`
+  coordinate namespace rename. The payload contract was not changed; the fixture now asserts
+  the existing v5 hash `e1318df2b4e77b7556720fa0635bbec3d535adb0df0f1f14fc20d54a2ca76c2c`.
+- Validation passed 34 Python tests, Ruff, SQLFluff, dbt parse, pip dependency checks, 138 source
+  tests, 65 Silver tests, 45 bounded candidate tests, 135 identity tests, 112 core tests, and
+  calibration/reconciliation/fixture groups. The bounded selector union covers all 463 dbt
+  tests.
+- No source import, libpostal parse, Splink benchmark, national scoring, downstream identity,
+  core fact or calibration sample was rerun. Published scores and calibration hashes were
+  verified. Scratch and failed-run audit evidence remain preserved pending positive ownership
+  proof and explicit cleanup approval.
 
 ## 9. Open decisions and governance dependencies
 

@@ -1,14 +1,14 @@
 ---
-title: "EPC v4 Data Model Design"
+title: "EPC v5 Data Model Design"
 subtitle: "An evidence-first dbt and DuckDB specification"
-status: "Greenfield design for implementation"
-version: "4.0-design"
+status: "Implemented through core facts; marts and graph exports remain future scope"
+version: "5.0-design"
 date: "2026-07-14"
 authoritative_store: "DuckDB models built by dbt"
 graph_role: "Curated Neo4j projection"
 ---
 
-# EPC v4 Data Model Design
+# EPC v5 Data Model Design
 
 ## 1. Who This Document Is For
 
@@ -16,7 +16,7 @@ This document is for two readers at once.
 
 The first is a data engineer who can build a sound dbt project but may not yet know the UK property, Energy Performance Certificate (EPC), Price Paid Data (PPD), or geography landscape. The opening chapters tell the story in ordinary language before introducing the contracts.
 
-The second is a coding model or engineer implementing EPC v4. The model cards define grain, keys, materialisation, dependencies, population rules, types, tests, and deliberate non-goals. They are intended to remove guesswork without pretending that uncertain property identity can be made certain by a database schema.
+The second is a coding model or engineer implementing EPC v5. The model cards define grain, keys, materialisation, dependencies, population rules, types, tests, and deliberate non-goals. They are intended to remove guesswork without pretending that uncertain property identity can be made certain by a database schema.
 
 ### 1.1 The short version
 
@@ -27,7 +27,7 @@ We receive records about places. We do not receive a perfect list of places.
 - An EPC recommendation row says that the certificate contained a recommendation.
 - An ONSUD row links a Unique Property Reference Number (UPRN) to geography in a particular release.
 
-EPC v4 keeps those observations intact, then makes separate, versioned assertions about which real-world premises, building, or dwelling they concern. It derives current-looking state only for a stated `as_of_date`, and evaluates policy only against a named, dated ruleset.
+EPC v5 keeps those observations intact, then makes separate, versioned assertions about which real-world premises, building, or dwelling they concern. It derives current-looking state only for a stated `as_of_date`, and evaluates policy only against a named, dated ruleset.
 
 ```text
 evidence                 assertion                  dated interpretation
@@ -69,7 +69,7 @@ Price Paid Data, shortened to PP or PPD, contains residential property transacti
 
 It is useful evidence of a transaction at a written address. It does not, by itself, prove the current owner, current occupation, current tenancy, exact building geometry, or that two similarly written addresses are the same dwelling.
 
-PPD Category B means an additional transaction category under the publisher's definition. It may cover several kinds of transaction. EPC v4 names the derived boolean `is_additional_ppd_transaction`; it never calls Category B an investment or buy-to-let sale.
+PPD Category B means an additional transaction category under the publisher's definition. It may cover several kinds of transaction. EPC v5 names the derived boolean `is_additional_ppd_transaction`; it never calls Category B an investment or buy-to-let sale.
 
 ### 2.2 EPC certificates
 
@@ -81,7 +81,7 @@ An EPC-recorded tenure is what the certificate says at assessment time. It is no
 
 Recommendations are child observations belonging to a certificate. They may include source wording, indicative costs, and an improvement identifier or item order. They are facts about what the certificate recommended, not proof that work was suitable, commissioned, paid for, or installed.
 
-EPC v4 maps recommendation wording to a canonical `MeasureConcept` separately. That mapping is versioned, can be one-to-many, and carries confidence. The raw recommendation remains available even if the taxonomy changes.
+EPC v5 maps recommendation wording to a canonical `MeasureConcept` separately. That mapping is versioned, can be one-to-many, and carries confidence. The raw recommendation remains available even if the taxonomy changes.
 
 ### 2.4 ONSUD
 
@@ -522,7 +522,7 @@ Stations describe responsibility, not necessarily a one-to-one schema boundary. 
 schema still follows Chapter 4.1; its Station header tells an engineer where it sits in the
 end-to-end sequence.
 
-| Station | Responsibility | Current EPC v4 implementation |
+| Station | Responsibility | Current EPC v5 implementation |
 |---|---|---|
 | **Station 1 (Ingestion & Raw Landing)** | Register and preserve external bytes and source rows | The Python importer writes audit manifests and immutable Bronze relations. These are declared to dbt as sources, so there are currently no Station 1 dbt models. |
 | **Station 2 (The Scrubbing Station)** | Validate, type, clean and selectively parse difficult source text | Silver staging, quarantine, reconciliation and quality models live here. The flat-trap route sends only qualifying EPC rows to pinned libpostal. A deterministic UK-specific component parser is planned, not currently implemented. |
@@ -3778,7 +3778,7 @@ The existing v3 design review informed the architectural problem statement, espe
 | Currentness | Deterministic as-of selection under a declared chronology contract |
 | dbt | Transformation framework that builds, tests, and documents SQL models |
 | Disclosure profile | Versioned rule defining fields and records allowed in an export |
-| DuckDB | Embedded analytical database that is authoritative for EPC v4 outputs |
+| DuckDB | Embedded analytical database that is authoritative for EPC v5 outputs |
 | Dwelling | Candidate residential unit, distinct from its containing building |
 | EPC | Energy Performance Certificate observation/assessment |
 | EER | Energy Efficiency Rating basis used in relevant EPC/policy contexts |

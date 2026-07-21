@@ -697,7 +697,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--labels-path", type=Path)
     parser.add_argument("--minimum-labels", type=int, default=100)
     parser.add_argument("--threads", type=int, default=1)
-    parser.add_argument("--memory-limit", default="12GB")
+    parser.add_argument("--memory-limit", default="8GB")
+    parser.add_argument(
+        "--temp-directory", type=Path, default=Path("output/tmp/calibration")
+    )
+    parser.add_argument("--max-temp-size", default="120GB")
     parser.add_argument("--log-level", default="INFO")
     return parser.parse_args()
 
@@ -708,9 +712,12 @@ def main() -> None:
         level=getattr(logging, args.log_level.upper()),
         format="%(asctime)s %(levelname)s %(message)s",
     )
+    args.temp_directory.mkdir(parents=True, exist_ok=True)
     connection = duckdb.connect(str(args.database))
     connection.execute(f"set threads = {args.threads}")
     connection.execute("set memory_limit = ?", [args.memory_limit])
+    connection.execute("set temp_directory = ?", [str(args.temp_directory.resolve())])
+    connection.execute("set max_temp_directory_size = ?", [args.max_temp_size])
     connection.execute("set preserve_insertion_order = false")
     try:
         if args.action == "create-sample":

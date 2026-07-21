@@ -1,44 +1,71 @@
-# EPC v4
+# EPC v5
 
-Evidence-first UK property intelligence built with DuckDB, dbt and Splink, with curated Neo4j graph exports.
+EPC v5 is a vector-free property identity pipeline for HM Land Registry Price Paid
+Data, domestic EPC records, and ONS geography data. DuckDB is authoritative, dbt
+owns transformation contracts, Splink 4 supplies probabilistic comparison evidence,
+and libpostal is used selectively for difficult flat and unit addresses.
 
-## Design principle
+The governing principle is:
 
-> Source records remain evidence. Entity links are versioned assertions. Current state is derived for an as-of date. Policy outputs are cautious, versioned screening results.
+> Source records remain evidence. Entity links are versioned assertions. Current state
+> is derived for an explicit as-of date. Policy outputs are cautious, versioned screens.
 
-The authoritative design is [`docs/epc-v5-data-model-design.md`](docs/epc-v5-data-model-design.md).
+The authoritative model specification is
+[`docs/epc-v5-data-model-design.md`](docs/epc-v5-data-model-design.md). The executable
+clean-build and restart procedures are in
+[`docs/epc-v5-rebuild-guide.md`](docs/epc-v5-rebuild-guide.md).
 
-## Quick start
+## Implemented Scope
+
+- Audited Bronze ingestion for PPD, EPC, ONSUD, LAD, and LPA source files.
+- Typed Silver observations, quarantine evidence, and source-file reconciliation.
+- Selective libpostal parsing for the EPC flat-trap route.
+- Deterministic identity observations and D01/P01/P02/P04 candidate generation.
+- Splink benchmark training and immutable national score publication.
+- Review-only decisions, alternatives, hypotheses, singleton outcomes, and assignments.
+- Atomic sale, EPC certificate, recommendation, coordinate, and geography core models.
+- Deterministic calibration sampling with manual-only label import and evaluation.
+
+## Future Scope
+
+- `models/mart/` does not yet contain implemented current-EPC, MEES, or retrofit marts.
+- `models/graph_export/` does not yet contain implemented Neo4j export contracts.
+- Persistent registry promotion remains disabled while the decision policy is uncalibrated.
+
+No vector embeddings, FastEmbed, ONNX Runtime, MiniLM/MPNet models, semantic blocking,
+or address-vector tables are part of EPC v5.
+
+## Quick Start
 
 ```bash
 make setup
-source .venv/bin/activate
-dbt debug --profiles-dir .
-dbt parse --profiles-dir .
-pytest
+make debug
+make test
+make lint
 ```
 
-## Project structure
+For a new database use `bin/run_pipeline.sh clean-build`. For the existing database use
+`bin/run_pipeline.sh resume`; it verifies completed immutable stages instead of rerunning
+them.
+
+## Project Structure
 
 ```text
-models/audit         run, file and release control
-models/bronze        immutable source-shaped evidence
-models/silver        typed source observations
-models/identity      Splink evidence, decisions and persistent registry
-models/intermediate  reusable private transformations
-models/core          buildings, dwellings, facts and assertion bridges
-models/mart          current EPC, MEES and retrofit products
-models/graph_export  scoped, referentially closed Neo4j projections
+models/audit         ingestion controls, quarantine, reconciliation
+models/silver        typed source observations and address routing
+models/identity      candidates, scores, decisions, hypotheses, assignments
+models/intermediate  reusable source-to-core bridges
+models/core          atomic facts, coordinates, geography, registry foundations
+models/mart          future dated-state and policy products
+models/graph_export  future referentially closed graph projections
 ```
 
-## Important boundaries
+## Important Boundaries
 
-- Do not copy v3 model logic without checking it against the v4 design.
-- Do not use `ROW_NUMBER()` for durable identifiers.
-- Do not call a Splink cluster a confirmed property.
-- Do not infer current tenancy from EPC tenure.
-- Do not describe MEES screening as legal advice or definitive compliance.
-- Do not treat PPD Category B as proof of investment ownership.
-- Do not publish address-level graph exports without current licensing and privacy review.
-
-No source data or generated databases are committed to Git.
+- Do not copy EPC v3 logic without checking it against the v5 design.
+- Do not use row numbers for durable identifiers.
+- Do not call a Splink score, candidate, or cluster a confirmed property.
+- Do not promote registry entities under the uncalibrated policy.
+- Do not infer labels, current tenancy, legal compliance, or investment intent.
+- Do not add vector or semantic dependencies.
+- Do not commit source data, generated databases, logs, or calibration exports.

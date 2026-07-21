@@ -12,4 +12,4 @@ epc_v5:
         threads: "{{ env_var('EPC_V5_DUCKDB_THREADS', '1') | int }}"
         preserve_insertion_order: false
         memory_limit: "{{ env_var('EPC_V5_MEMORY_LIMIT', '8GB') }}"
-        max_temp_directory_size: "{{ env_var('EPC_V5_MAX_TEMP_SIZE', '70GB') }}"
+        max_temp_directory_size: "{{ env_var('EPC_V5_MAX_TEMP_SIZE', '120GB') }}"

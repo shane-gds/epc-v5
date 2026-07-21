@@ -1,4 +1,4 @@
-# EPC v4 implementation guidance
+# EPC v5 implementation guidance
 
 Read `docs/epc-v5-data-model-design.md` before implementing any model.
 

@@ -222,14 +222,28 @@ def _parse_args() -> argparse.Namespace:
         default=Path("output/duckdb/epc_v5.duckdb"),
     )
     parser.add_argument("--output-root", type=Path, default=Path("output/identity"))
-    parser.add_argument("--threads", type=int, default=4)
-    parser.add_argument("--memory-limit", default="12GB")
-    parser.add_argument("--salting-partitions", type=int, default=4)
+    parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument("--memory-limit", default="8GB")
+    parser.add_argument("--temp-directory", type=Path, default=Path("output/tmp/splink"))
+    parser.add_argument("--max-temp-size", default="120GB")
+    parser.add_argument("--salting-partitions", type=int, default=2)
     parser.add_argument("--sample-hex-max", default="03")
     parser.add_argument("--u-pairs", type=int, default=1_000_000)
     parser.add_argument("--model-path", type=Path)
     parser.add_argument("--log-level", default="INFO")
     return parser.parse_args()
+
+
+def _configure_connection(
+    connection: duckdb.DuckDBPyConnection,
+    args: argparse.Namespace,
+) -> None:
+    args.temp_directory.mkdir(parents=True, exist_ok=True)
+    connection.execute(f"set threads = {args.threads}")
+    connection.execute("set memory_limit = ?", [args.memory_limit])
+    connection.execute("set temp_directory = ?", [str(args.temp_directory.resolve())])
+    connection.execute("set max_temp_directory_size = ?", [args.max_temp_size])
+    connection.execute("set preserve_insertion_order = false")
 
 
 def _create_match_score_table(connection: duckdb.DuckDBPyConnection) -> None:
@@ -320,9 +334,7 @@ def run_national(args: argparse.Namespace) -> uuid.UUID:
     model_sha256 = _sha256_file(model_path)
     model_json = model_path.read_text(encoding="utf-8")
     connection = duckdb.connect(str(args.database))
-    connection.execute(f"set threads = {args.threads}")
-    connection.execute("set memory_limit = ?", [args.memory_limit])
-    connection.execute("set preserve_insertion_order = false")
+    _configure_connection(connection, args)
     _create_audit_table(connection)
     _create_match_score_table(connection)
     initialize_registry_tables(connection)
@@ -585,15 +597,13 @@ def run_national(args: argparse.Namespace) -> uuid.UUID:
 
 def run_benchmark(args: argparse.Namespace) -> uuid.UUID:
     connection = duckdb.connect(str(args.database))
-    connection.execute(f"set threads = {args.threads}")
-    connection.execute("set memory_limit = ?", [args.memory_limit])
-    connection.execute("set preserve_insertion_order = false")
+    _configure_connection(connection, args)
     connection.execute("create schema if not exists identity_work")
     _create_audit_table(connection)
 
     identity_run_id, identity_run_key, model_version = _current_identity_run(connection)
     splink_run_id = uuid.uuid4()
-    linker_uid = f"epcv4_{identity_run_key[:12]}_{model_version}"
+    linker_uid = f"epcv5_{identity_run_key[:12]}_{model_version}"
     settings = create_settings(
         salting_partitions=args.salting_partitions,
         linker_uid=linker_uid,

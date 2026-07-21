@@ -1,5 +1,5 @@
 name: epc_v5
-version: 4.0.0
+version: 5.0.0
 config-version: 2
 
 profile: epc_v5
@@ -42,10 +42,6 @@ models:
       +schema: audit
       +materialized: table
       +tags: [audit]
-    bronze:
-      +schema: bronze
-      +materialized: incremental
-      +tags: [bronze]
     silver:
       +schema: silver
       +materialized: table
@@ -62,14 +58,6 @@ models:
       +schema: core
       +materialized: table
       +tags: [core]
-    mart:
-      +schema: mart
-      +materialized: table
-      +tags: [mart]
-    graph_export:
-      +schema: graph_export
-      +materialized: table
-      +tags: [graph_export]
 
 seeds:
   epc_v5:

@@ -18,7 +18,7 @@ def stable_sha256(
     payload_version: str,
     fields: Iterable[object | None],
 ) -> str:
-    """Return the lowercase SHA-256 key defined by the v4 SK1 contract."""
+    """Return the lowercase SHA-256 key defined by the inherited SK1 contract."""
     payload = [
         "SK1;",
         f"NS={_component(key_namespace)}",

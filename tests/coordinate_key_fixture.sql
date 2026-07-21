@@ -4,4 +4,4 @@ with fixture as (
 
 select coordinate_key
 from fixture
-where coordinate_key <> '9dfe8b238220f8e0e0edeb011b132600985eec69aaa10ed29e0d2c1991596d03'
+where coordinate_key <> 'e1318df2b4e77b7556720fa0635bbec3d535adb0df0f1f14fc20d54a2ca76c2c'

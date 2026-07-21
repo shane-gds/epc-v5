@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DB_PATH="${1:-output/duckdb/epc_v5.duckdb}"
+PYTHON="${PYTHON:-.venv/bin/python}"
+
+[[ -f "$DB_PATH" ]] || { printf 'Database not found: %s\n' "$DB_PATH" >&2; exit 2; }
+[[ -x "$PYTHON" ]] || { printf 'Python not found: %s\n' "$PYTHON" >&2; exit 2; }
+
+"$PYTHON" - "$DB_PATH" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+
+import duckdb
+
+database = Path(sys.argv[1]).resolve()
+connection = duckdb.connect(str(database), read_only=True)
+tables = {
+    (row[0], row[1])
+    for row in connection.execute(
+        "select table_schema, table_name from information_schema.tables"
+    ).fetchall()
+}
+print(f"Authoritative database: {database}")
+print("\nNon-authoritative identity_work inventory:")
+rows = connection.execute(
+    """
+    select table_name, estimated_size
+    from duckdb_tables()
+    where schema_name = 'identity_work'
+    order by table_name
+    """
+).fetchall()
+for table_name, estimated_size in rows:
+    print(f"  {table_name}: {estimated_size:,} estimated rows")
+
+print("\nUnmanaged dbt backup candidates:")
+backups = connection.execute(
+    """
+    select schema_name, table_name, estimated_size
+    from duckdb_tables()
+    where table_name like '%\\_\\_dbt\\_backup' escape '\\'
+    order by schema_name, table_name
+    """
+).fetchall()
+if backups:
+    for schema_name, table_name, estimated_size in backups:
+        print(f"  {schema_name}.{table_name}: {estimated_size:,} estimated rows")
+else:
+    print("  none")
+
+publication = []
+if {
+    ("identity", "identity_splink_publication"),
+    ("identity", "int_identity_current_run"),
+}.issubset(tables):
+    publication = connection.execute(
+        """
+        select p.splink_run_id, p.model_sha256
+        from identity.identity_splink_publication as p
+        inner join identity.int_identity_current_run as r using (identity_run_key)
+        """
+    ).fetchall()
+print(f"\nCurrent national publications: {len(publication)}")
+
+sample = None
+if {
+    ("identity", "identity_calibration_sample_manifest"),
+    ("identity", "int_identity_current_run"),
+}.issubset(tables):
+    sample = connection.execute(
+        """
+        select sample.export_path, sample.export_sha256
+        from identity.identity_calibration_sample_manifest as sample
+        inner join identity.int_identity_current_run as current_run using (identity_run_key)
+        where sample.sample_status = 'SUCCEEDED'
+        order by sample.completed_at desc
+        limit 1
+        """
+    ).fetchone()
+connection.close()
+if sample:
+    path = Path(sample[0])
+    verified = path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == sample[1]
+    print(f"Latest calibration export verified: {verified} ({path})")
+
+print(
+    "\nNo tables were changed. Do not drop these relations by prefix. "
+    "Cleanup requires an idle database, explicit run ownership, publication closure, "
+    "and an operator-approved exact table list."
+)
+PY

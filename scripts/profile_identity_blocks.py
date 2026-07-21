@@ -85,13 +85,15 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("output/duckdb/epc_v5.duckdb"),
     )
-    parser.add_argument("--memory-limit", default="12GB")
+    parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument("--memory-limit", default="8GB")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     connection = duckdb.connect(str(args.database), read_only=True)
+    connection.execute(f"set threads = {args.threads}")
     connection.execute("set memory_limit = ?", [args.memory_limit])
     headers = (
         "Rule",

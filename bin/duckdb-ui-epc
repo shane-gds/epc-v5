@@ -3,7 +3,7 @@ set -euo pipefail
 
 DUCKDB_BIN="${DUCKDB_BIN:-$HOME/.local/bin/duckdb}"
 DB_PATH="${1:-output/duckdb/epc_v5.duckdb}"
-CATALOG_PATH="${DUCKDB_UI_CATALOG:-$HOME/tmp/duckdb-ui-catalog-epc4.db}"
+CATALOG_PATH="${DUCKDB_UI_CATALOG:-$HOME/tmp/duckdb-ui-catalog-epc5.db}"
 PORT="${DUCKDB_UI_PORT:-4214}"
 ATTACH_NAME="${DUCKDB_UI_ATTACH_NAME:-epc_v5}"
 
