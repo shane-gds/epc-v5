@@ -9,7 +9,7 @@ select
     current_run.address_parse_run_key,
     current_run.parser_contract_version,
     current_run.runtime_artifact_key,
-    current_run.implementation_sha256 as parser_implementation_sha256,
+    current_run.parser_implementation_sha256,
     request.selection_reason,
     result.building_number_designator,
     result.unit_identifier_comparison,
