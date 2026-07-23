@@ -22,9 +22,11 @@ mkdir -p "$(dirname "$CATALOG_PATH")"
 db_sql_path=${DB_PATH//\'/\'\'}
 attach_sql_name=${ATTACH_NAME//\'/\'\'}
 
-printf 'Starting DuckDB UI on http://127.0.0.1:%s\n' "$PORT"
+PRINT_URL="http://localhost:${PORT}"
+printf 'Starting DuckDB UI on %s\n' "$PRINT_URL"
 printf 'Attached database: %s as %s\n' "$DB_PATH" "$ATTACH_NAME"
-printf 'Leave this process running, then open an SSH tunnel from your laptop.\n'
+printf 'Leave this process running.\n'
+printf 'VS Code: open %s in your browser (127.0.0.1 will NOT work).\n' "$PRINT_URL"
 
 exec "$DUCKDB_BIN" "$CATALOG_PATH" -cmd "
 INSTALL ui;
